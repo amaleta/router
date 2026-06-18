@@ -139,7 +139,7 @@ add_mark() {
         uci set network.@rule[-1].mark='0x1'
         uci set network.@rule[-1].priority='100'
         uci set network.@rule[-1].lookup='vpn'
-        uci commit
+        uci commit network
     fi
 }
 
@@ -242,23 +242,23 @@ add_tunnel() {
 
         uci set network.wg0=interface
         uci set network.wg0.proto='wireguard'
-        uci set network.wg0.private_key=$WG_PRIVATE_KEY
+        uci set network.wg0.private_key="$WG_PRIVATE_KEY"
         uci set network.wg0.listen_port='51820'
-        uci set network.wg0.addresses=$WG_IP
+        uci set network.wg0.addresses="$WG_IP"
 
         if ! uci show network | grep -q wireguard_wg0; then
             uci add network wireguard_wg0
         fi
         uci set network.@wireguard_wg0[0]=wireguard_wg0
         uci set network.@wireguard_wg0[0].name='wg0_client'
-        uci set network.@wireguard_wg0[0].public_key=$WG_PUBLIC_KEY
-        uci set network.@wireguard_wg0[0].preshared_key=$WG_PRESHARED_KEY
+        uci set network.@wireguard_wg0[0].public_key="$WG_PUBLIC_KEY"
+        uci set network.@wireguard_wg0[0].preshared_key="$WG_PRESHARED_KEY"
         uci set network.@wireguard_wg0[0].route_allowed_ips='0'
         uci set network.@wireguard_wg0[0].persistent_keepalive='25'
-        uci set network.@wireguard_wg0[0].endpoint_host=$WG_ENDPOINT
+        uci set network.@wireguard_wg0[0].endpoint_host="$WG_ENDPOINT"
         uci set network.@wireguard_wg0[0].allowed_ips='0.0.0.0/0'
-        uci set network.@wireguard_wg0[0].endpoint_port=$WG_ENDPOINT_PORT
-        uci commit
+        uci set network.@wireguard_wg0[0].endpoint_port="$WG_ENDPOINT_PORT"
+        uci commit network
     fi
 
     if [ "$TUNNEL" = 'ovpn' ]; then
@@ -385,19 +385,19 @@ EOF
 
         uci set network.awg0=interface
         uci set network.awg0.proto='amneziawg'
-        uci set network.awg0.private_key=$AWG_PRIVATE_KEY
+        uci set network.awg0.private_key="$AWG_PRIVATE_KEY"
         uci set network.awg0.listen_port='51820'
-        uci set network.awg0.addresses=$AWG_IP
+        uci set network.awg0.addresses="$AWG_IP"
 
-        uci set network.awg0.awg_jc=$AWG_JC
-        uci set network.awg0.awg_jmin=$AWG_JMIN
-        uci set network.awg0.awg_jmax=$AWG_JMAX
-        uci set network.awg0.awg_s1=$AWG_S1
-        uci set network.awg0.awg_s2=$AWG_S2
-        uci set network.awg0.awg_h1=$AWG_H1
-        uci set network.awg0.awg_h2=$AWG_H2
-        uci set network.awg0.awg_h3=$AWG_H3
-        uci set network.awg0.awg_h4=$AWG_H4
+        uci set network.awg0.awg_jc="$AWG_JC"
+        uci set network.awg0.awg_jmin="$AWG_JMIN"
+        uci set network.awg0.awg_jmax="$AWG_JMAX"
+        uci set network.awg0.awg_s1="$AWG_S1"
+        uci set network.awg0.awg_s2="$AWG_S2"
+        uci set network.awg0.awg_h1="$AWG_H1"
+        uci set network.awg0.awg_h2="$AWG_H2"
+        uci set network.awg0.awg_h3="$AWG_H3"
+        uci set network.awg0.awg_h4="$AWG_H4"
 
         if ! uci show network | grep -q amneziawg_awg0; then
             uci add network amneziawg_awg0
@@ -405,14 +405,14 @@ EOF
 
         uci set network.@amneziawg_awg0[0]=amneziawg_awg0
         uci set network.@amneziawg_awg0[0].name='awg0_client'
-        uci set network.@amneziawg_awg0[0].public_key=$AWG_PUBLIC_KEY
-        uci set network.@amneziawg_awg0[0].preshared_key=$AWG_PRESHARED_KEY
+        uci set network.@amneziawg_awg0[0].public_key="$AWG_PUBLIC_KEY"
+        uci set network.@amneziawg_awg0[0].preshared_key="$AWG_PRESHARED_KEY"
         uci set network.@amneziawg_awg0[0].route_allowed_ips='0'
         uci set network.@amneziawg_awg0[0].persistent_keepalive='25'
-        uci set network.@amneziawg_awg0[0].endpoint_host=$AWG_ENDPOINT
+        uci set network.@amneziawg_awg0[0].endpoint_host="$AWG_ENDPOINT"
         uci set network.@amneziawg_awg0[0].allowed_ips='0.0.0.0/0'
-        uci set network.@amneziawg_awg0[0].endpoint_port=$AWG_ENDPOINT_PORT
-        uci commit
+        uci set network.@amneziawg_awg0[0].endpoint_port="$AWG_ENDPOINT_PORT"
+        uci commit network
     fi
 
 }
@@ -461,7 +461,7 @@ add_zone() {
         printf "\033[32;1mCreate zone\033[0m\n"
 
         # Delete exists zone
-        zone_tun_id=$(uci show firewall | grep -E '@zone.*tun0' | awk -F '[][{}]' '{print $2}' | head -n 1)
+        zone_tun_id=$(uci show firewall | grep -E "@zone.*network='tun0'" | awk -F '[][{}]' '{print $2}' | head -n 1)
         if [ "$zone_tun_id" = 0 ] || [ "$zone_tun_id" = 1 ]; then
             printf "\033[32;1mtun0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
@@ -470,7 +470,7 @@ add_zone() {
             while uci -q delete firewall.@zone[$zone_tun_id]; do :; done
         fi
 
-        zone_wg_id=$(uci show firewall | grep -E '@zone.*wg0' | awk -F '[][{}]' '{print $2}' | head -n 1)
+        zone_wg_id=$(uci show firewall | grep -E "@zone.*network='wg0'" | awk -F '[][{}]' '{print $2}' | head -n 1)
         if [ "$zone_wg_id" = 0 ] || [ "$zone_wg_id" = 1 ]; then
             printf "\033[32;1mwg0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
@@ -479,7 +479,7 @@ add_zone() {
             while uci -q delete firewall.@zone[$zone_wg_id]; do :; done
         fi
 
-        zone_awg_id=$(uci show firewall | grep -E '@zone.*awg0' | awk -F '[][{}]' '{print $2}' | head -n 1)
+        zone_awg_id=$(uci show firewall | grep -E "@zone.*network='awg0'" | awk -F '[][{}]' '{print $2}' | head -n 1)
         if [ "$zone_awg_id" = 0 ] || [ "$zone_awg_id" = 1 ]; then
             printf "\033[32;1mawg0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
@@ -556,10 +556,10 @@ add_zone() {
 
 show_manual() {
     if [ "$TUNNEL" = tun2socks ]; then
-        printf "\033[42;1mZone for tun2socks cofigured. But you need to set up the tunnel yourself.\033[0m\n"
+        printf "\033[42;1mZone for tun2socks configured. But you need to set up the tunnel yourself.\033[0m\n"
         echo "Use this manual: https://cli.co/VNZISEM"
     elif [ "$TUNNEL" = ovpn ]; then
-        printf "\033[42;1mZone for OpenVPN cofigured. But you need to set up the tunnel yourself.\033[0m\n"
+        printf "\033[42;1mZone for OpenVPN configured. But you need to set up the tunnel yourself.\033[0m\n"
         echo "Use this manual: https://itdog.info/nastrojka-klienta-openvpn-na-openwrt/"
     fi
 }
@@ -572,7 +572,7 @@ add_set() {
         uci add firewall ipset
         uci set firewall.@ipset[-1].name='vpn_domains'
         uci set firewall.@ipset[-1].match='dst_net'
-        uci commit
+        uci commit firewall
     fi
     if uci show firewall | grep -q "@rule.*name='mark_domains'"; then
         printf "\033[32;1mRule for set already exist\033[0m\n"
@@ -588,7 +588,7 @@ add_set() {
         uci set firewall.@rule[-1].set_mark='0x1'
         uci set firewall.@rule[-1].target='MARK'
         uci set firewall.@rule[-1].family='ipv4'
-        uci commit
+        uci commit firewall
     fi
 }
 
@@ -639,7 +639,7 @@ add_dns_resolver() {
             fi
 
             printf "\033[32;1mDNSCrypt restart\033[0m\n"
-            service dnscrypt-proxy restart
+            /etc/init.d/dnscrypt-proxy restart
             printf "\033[32;1mDNSCrypt needs to load the relays list. Please wait\033[0m\n"
             sleep 30
 
@@ -857,36 +857,36 @@ add_internal_wg() {
     fi
 
     uci set network.${INTERFACE_NAME}=interface
-    uci set network.${INTERFACE_NAME}.proto=$PROTO
-    uci set network.${INTERFACE_NAME}.private_key=$WG_PRIVATE_KEY_INT
+    uci set network.${INTERFACE_NAME}.proto="$PROTO"
+    uci set network.${INTERFACE_NAME}.private_key="$WG_PRIVATE_KEY_INT"
     uci set network.${INTERFACE_NAME}.listen_port='51821'
-    uci set network.${INTERFACE_NAME}.addresses=$WG_IP
+    uci set network.${INTERFACE_NAME}.addresses="$WG_IP"
 
     if [ "$PROTOCOL_NAME" = 'AmneziaWG' ]; then
-        uci set network.${INTERFACE_NAME}.awg_jc=$AWG_JC
-        uci set network.${INTERFACE_NAME}.awg_jmin=$AWG_JMIN
-        uci set network.${INTERFACE_NAME}.awg_jmax=$AWG_JMAX
-        uci set network.${INTERFACE_NAME}.awg_s1=$AWG_S1
-        uci set network.${INTERFACE_NAME}.awg_s2=$AWG_S2
-        uci set network.${INTERFACE_NAME}.awg_h1=$AWG_H1
-        uci set network.${INTERFACE_NAME}.awg_h2=$AWG_H2
-        uci set network.${INTERFACE_NAME}.awg_h3=$AWG_H3
-        uci set network.${INTERFACE_NAME}.awg_h4=$AWG_H4
+        uci set network.${INTERFACE_NAME}.awg_jc="$AWG_JC"
+        uci set network.${INTERFACE_NAME}.awg_jmin="$AWG_JMIN"
+        uci set network.${INTERFACE_NAME}.awg_jmax="$AWG_JMAX"
+        uci set network.${INTERFACE_NAME}.awg_s1="$AWG_S1"
+        uci set network.${INTERFACE_NAME}.awg_s2="$AWG_S2"
+        uci set network.${INTERFACE_NAME}.awg_h1="$AWG_H1"
+        uci set network.${INTERFACE_NAME}.awg_h2="$AWG_H2"
+        uci set network.${INTERFACE_NAME}.awg_h3="$AWG_H3"
+        uci set network.${INTERFACE_NAME}.awg_h4="$AWG_H4"
     fi
 
-    if ! uci show network | grep -q ${CONFIG_NAME}; then
-        uci add network ${CONFIG_NAME}
+    if ! uci show network | grep -q "${CONFIG_NAME}"; then
+        uci add network "${CONFIG_NAME}"
     fi
 
-    uci set network.@${CONFIG_NAME}[0]=$CONFIG_NAME
+    uci set network.@${CONFIG_NAME}[0]="$CONFIG_NAME"
     uci set network.@${CONFIG_NAME}[0].name="${INTERFACE_NAME}_client"
-    uci set network.@${CONFIG_NAME}[0].public_key=$WG_PUBLIC_KEY_INT
-    uci set network.@${CONFIG_NAME}[0].preshared_key=$WG_PRESHARED_KEY_INT
+    uci set network.@${CONFIG_NAME}[0].public_key="$WG_PUBLIC_KEY_INT"
+    uci set network.@${CONFIG_NAME}[0].preshared_key="$WG_PRESHARED_KEY_INT"
     uci set network.@${CONFIG_NAME}[0].route_allowed_ips='0'
     uci set network.@${CONFIG_NAME}[0].persistent_keepalive='25'
-    uci set network.@${CONFIG_NAME}[0].endpoint_host=$WG_ENDPOINT_INT
+    uci set network.@${CONFIG_NAME}[0].endpoint_host="$WG_ENDPOINT_INT"
     uci set network.@${CONFIG_NAME}[0].allowed_ips='0.0.0.0/0'
-    uci set network.@${CONFIG_NAME}[0].endpoint_port=$WG_ENDPOINT_PORT_INT
+    uci set network.@${CONFIG_NAME}[0].endpoint_port="$WG_ENDPOINT_PORT_INT"
     uci commit network
 
     grep -q "110 vpninternal" /etc/iproute2/rt_tables || echo '110 vpninternal' >> /etc/iproute2/rt_tables
@@ -898,7 +898,7 @@ add_internal_wg() {
         uci set network.@rule[-1].mark='0x2'
         uci set network.@rule[-1].priority='110'
         uci set network.@rule[-1].lookup='vpninternal'
-        uci commit
+        uci commit network
     fi
 
     if ! uci show network | grep -q vpn_route_internal; then
@@ -980,8 +980,7 @@ add_internal_wg() {
 
     sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /tmp/dnsmasq.d/domains.lst" "/etc/init.d/getdomains" 2>/dev/null
 
-    service dnsmasq restart
-    service network restart
+    /etc/init.d/dnsmasq restart
 }
 
 download_awg_package() {
