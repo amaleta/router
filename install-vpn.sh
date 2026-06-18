@@ -439,12 +439,14 @@ dnsmasqfull() {
 }
 
 dnsmasqconfdir() {
+    # Use persistent /etc/dnsmasq.d so domains.lst and telegram.conf survive reboots
     if [ "$VERSION_ID" -ge 24 ]; then
-        if uci get dhcp.@dnsmasq[0].confdir | grep -q /tmp/dnsmasq.d; then
+        if uci get dhcp.@dnsmasq[0].confdir | grep -q /etc/dnsmasq.d; then
             printf "\033[32;1mconfdir already set\033[0m\n"
         else
             printf "\033[32;1mSetting confdir\033[0m\n"
-            uci set dhcp.@dnsmasq[0].confdir='/tmp/dnsmasq.d'
+            mkdir -p /etc/dnsmasq.d
+            uci set dhcp.@dnsmasq[0].confdir='/etc/dnsmasq.d'
             uci commit dhcp
         fi
     fi
@@ -457,6 +459,27 @@ dnsmasqconfdir() {
         uci set dhcp.@dnsmasq[0].filter_aaaa='1'
         uci commit dhcp
     fi
+}
+
+fix_dnsmasq_permissions() {
+    # OpenWrt 25.x runs dnsmasq inside a ujail sandbox as unprivileged user (dnsmasq/dnsmasq),
+    # which prevents nftset directives from writing to nftables.
+    # Fix: run dnsmasq as root and disable the jail.
+
+    printf "\033[32;1mFixing dnsmasq permissions for nftset support (OpenWrt 25.x)\033[0m\n"
+
+    # Comment out unprivileged user/group in the init script
+    sed -i 's/^\([[:space:]]*xappend "--user=dnsmasq"\)/#\1/' /etc/init.d/dnsmasq
+    sed -i 's/^\([[:space:]]*xappend "--group=dnsmasq"\)/#\1/' /etc/init.d/dnsmasq
+
+    # Comment out the jail block (procd_add_jail and all procd_add_jail_mount lines)
+    sed -i 's/^\([[:space:]]*procd_add_jail dnsmasq\)/#\1/' /etc/init.d/dnsmasq
+    sed -i '/procd_add_jail_mount/s/^/#/' /etc/init.d/dnsmasq
+
+    # Force dnsmasq to run as root
+    grep -q "^user=root" /etc/dnsmasq.conf 2>/dev/null || echo "user=root" >> /etc/dnsmasq.conf
+
+    printf "\033[32;1mdnsmasq will run as root with jail disabled\033[0m\n"
 }
 
 remove_forwarding() {
@@ -777,15 +800,15 @@ start () {
 EOF
 cat << 'EOF' >> /etc/init.d/getdomains
     count=0
-    mkdir -p /tmp/dnsmasq.d
+    mkdir -p /etc/dnsmasq.d
     while [ "$count" -lt 10 ]; do
         if curl -m 3 -sf -o /dev/null github.com; then
-            if curl -f "$DOMAINS" --output /tmp/dnsmasq.d/domains.lst; then
+            if curl -f "$DOMAINS" --output /etc/dnsmasq.d/domains.lst; then
                 break
             else
                 echo "Failed to download domain list [$count]"
                 count=$((count+1))
-                rm -f /tmp/dnsmasq.d/domains.lst
+                rm -f /etc/dnsmasq.d/domains.lst
                 sleep 5
             fi
         else
@@ -799,11 +822,36 @@ cat << 'EOF' >> /etc/init.d/getdomains
         echo "Failed to reach GitHub after 10 attempts. Domain list not downloaded."
     fi
 
-    if [ -f /tmp/dnsmasq.d/domains.lst ] && dnsmasq --conf-file=/tmp/dnsmasq.d/domains.lst --test 2>&1 | grep -q "syntax check OK"; then
+    if [ -f /etc/dnsmasq.d/domains.lst ] && dnsmasq --conf-file=/etc/dnsmasq.d/domains.lst --test 2>&1 | grep -q "syntax check OK"; then
         /etc/init.d/dnsmasq restart
     fi
 }
 EOF
+
+    # Create persistent telegram.conf so Telegram domains always resolve into vpn_domains
+    cat << 'TELEOF' > /etc/dnsmasq.d/telegram.conf
+nftset=/t.me/4#inet#fw4#vpn_domains
+nftset=/telegram.me/4#inet#fw4#vpn_domains
+nftset=/telegram.org/4#inet#fw4#vpn_domains
+nftset=/core.telegram.org/4#inet#fw4#vpn_domains
+nftset=/stel.com/4#inet#fw4#vpn_domains
+nftset=/telegra.ph/4#inet#fw4#vpn_domains
+nftset=/graph.org/4#inet#fw4#vpn_domains
+TELEOF
+    printf "\033[32;1mCreated /etc/dnsmasq.d/telegram.conf\033[0m\n"
+
+    # Create /etc/rc.local with Telegram CIDR ranges (before exit 0)
+    # On OpenWrt 25.x /etc/firewall.user is no longer auto-executed,
+    # so rc.local is the reliable way to add nft elements after boot
+    cat << 'RCEOF' > /etc/rc.local
+#!/bin/sh
+# Add Telegram DC IP ranges to vpn_domains nft set
+nft add element inet fw4 vpn_domains { 149.154.160.0/20, 149.154.164.0/22, 149.154.168.0/22, 149.154.172.0/22, 91.108.4.0/22, 91.108.8.0/22, 91.108.12.0/22, 91.108.16.0/22, 91.108.20.0/22, 91.108.56.0/22, 95.161.64.0/20, 67.198.55.0/24, 185.76.151.0/24 } 2>/dev/null
+
+exit 0
+RCEOF
+    chmod +x /etc/rc.local
+    printf "\033[32;1mCreated /etc/rc.local with Telegram CIDR\033[0m\n"
 
         chmod +x /etc/init.d/getdomains
         /etc/init.d/getdomains enable
@@ -1011,7 +1059,7 @@ add_internal_wg() {
     fi
 
     if ! grep -q 'youtube.com.*domains.lst' /etc/init.d/getdomains 2>/dev/null; then
-        sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /tmp/dnsmasq.d/domains.lst" "/etc/init.d/getdomains" 2>/dev/null
+        sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /etc/dnsmasq.d/domains.lst" "/etc/init.d/getdomains" 2>/dev/null
     fi
 
     /etc/init.d/dnsmasq restart
@@ -1209,9 +1257,14 @@ dnsmasqfull
 
 dnsmasqconfdir
 
+fix_dnsmasq_permissions
+
 add_dns_resolver
 
 add_getdomains
+
+# Apply Telegram CIDR immediately (rc.local will re-apply on each boot)
+sh /etc/rc.local
 
 printf "\033[32;1mRestart network\033[0m\n"
 /etc/init.d/network restart
