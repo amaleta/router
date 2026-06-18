@@ -142,6 +142,10 @@ set_language_en() {
   TELEGRAM_CHANNEL="Telegram channel"
   TELEGRAM_CHAT="Telegram chat"
   VPN_TABLE_NOT_DEFINED="VPN routing table 'vpn' is not defined in /etc/iproute2/rt_tables"
+  AWG_TOOLS_INSTALLED="amneziawg-tools $INSTALLED"
+  AWG_TUNNEL_NOT_WORKING="Bad news: AmneziaWG tunnel isn't working. Check your AmneziaWG configuration."
+  AWG_ROUTING_TABLE_EXISTS="AmneziaWG routing table $EXISTS"
+  AWG_ROUTING_TABLE_DOESNT_EXIST="AmneziaWG routing table $DOESNT_EXIST. Details: https://cli.co/Atxr6U3"
 }
 
 set_language_ru() {
@@ -246,6 +250,10 @@ set_language_ru() {
   TELEGRAM_CHANNEL="Telegram канал"
   TELEGRAM_CHAT="Telegram чат"
   VPN_TABLE_NOT_DEFINED="Таблица маршрутизации 'vpn' не определена в /etc/iproute2/rt_tables"
+  AWG_TOOLS_INSTALLED="amneziawg-tools $INSTALLED"
+  AWG_TUNNEL_NOT_WORKING="Плохие новости: туннель AmneziaWG не работает. Проверьте конфигурацию AmneziaWG."
+  AWG_ROUTING_TABLE_EXISTS="Таблица маршрутизации AmneziaWG $EXISTS"
+  AWG_ROUTING_TABLE_DOESNT_EXIST="Таблица маршрутизации AmneziaWG $DOESNT_EXIST. Подробности: https://cli.co/Atxr6U3"
 }
 
 checkpoint_true() {
@@ -343,7 +351,7 @@ else
 fi
 
 DNSMASQ_VER=$(list_installed | grep "^dnsmasq-full" | grep -oE '[0-9]+\.[0-9]+' | head -n 1 | tr -d '.')
-if [ -n "$DNSMASQ_VER" ] && [ "$DNSMASQ_VER" -ge 287 ]; then
+if [ -n "$DNSMASQ_VER" ] && [ "$DNSMASQ_VER" -ge 287 ] 2>/dev/null; then
   checkpoint_true "$DNSMASQ_FULL_INSTALLED"
 else
   checkpoint_false "$DNSMASQ_FULL_NOT_INSTALLED"
@@ -398,8 +406,7 @@ else
 fi
 
 WG=false
-WIREGUARD=$(list_installed | grep -c wireguard-tools)
-if [ $WIREGUARD -eq 1 ]; then
+if list_installed | grep -q "^wireguard-tools"; then
   checkpoint_true "$WIREGUARD_TOOLS_INSTALLED"
   WG=true
 fi
@@ -410,9 +417,13 @@ if [ "$WG" = true ]; then
     checkpoint_true "$WIREGUARD_PROTOCOL"
   else
     checkpoint_false "$WIREGUARD_PROTOCOL"
-    WG_TRACE=$(traceroute -i wg0 itdog.info -m 1 | grep ms | awk '{print $2}' | grep -c -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
-    if [ $WG_TRACE -eq 1 ]; then
-      echo "$WIREGUARD_ROUTING_DOESNT_WORK"
+    if command -v traceroute >/dev/null 2>&1; then
+      WG_TRACE=$(traceroute -i wg0 itdog.info -m 1 | grep ms | awk '{print $2}' | grep -c -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
+      if [ $WG_TRACE -eq 1 ]; then
+        echo "$WIREGUARD_ROUTING_DOESNT_WORK"
+      else
+        printf "$WIREGUARD_TUNNEL_NOT_WORKING\n"
+      fi
     else
       printf "$WIREGUARD_TUNNEL_NOT_WORKING\n"
     fi
@@ -438,6 +449,33 @@ if [ "$WG" = true ]; then
   fi
 fi
 
+# AmneziaWG
+AWG=false
+if list_installed | grep -q "^amneziawg-tools\|^luci-proto-amneziawg\|^luci-app-amneziawg"; then
+  checkpoint_true "$AWG_TOOLS_INSTALLED"
+  AWG=true
+fi
+
+if [ "$AWG" = true ]; then
+  AWG_PING=$(ping -c 1 -q -I awg0 itdog.info 2>/dev/null | grep -c "1 packets received")
+  if [ "$AWG_PING" -eq 1 ]; then
+    checkpoint_true "AmneziaWG"
+  else
+    checkpoint_false "$AWG_TUNNEL_NOT_WORKING"
+  fi
+
+  # Check AWG route table
+  if [ "$VPN_TABLE_DEFINED" = true ]; then
+    if ip route show table vpn | grep -q "default dev awg0"; then
+      checkpoint_true "$AWG_ROUTING_TABLE_EXISTS"
+    else
+      checkpoint_false "$AWG_ROUTING_TABLE_DOESNT_EXIST"
+    fi
+  else
+    checkpoint_false "$AWG_ROUTING_TABLE_DOESNT_EXIST"
+  fi
+fi
+
 OVPN=false
 if list_installed | grep -q openvpn; then
   checkpoint_true "$OPENVPN_INSTALLED"
@@ -450,15 +488,19 @@ if [ "$OVPN" = true ]; then
     checkpoint_true "$OPENVPN_PROTOCOL"
   else
     checkpoint_false "$OPENVPN_PROTOCOL"
-    if traceroute -i tun0 itdog.info -m 1 | grep ms | awk '{print $2}' | grep -c -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'; then
-      echo "$OPENVPN_ROUTING_DOESNT_WORK"
+    if command -v traceroute >/dev/null 2>&1; then
+      if traceroute -i tun0 itdog.info -m 1 | grep ms | awk '{print $2}' | grep -c -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'; then
+        echo "$OPENVPN_ROUTING_DOESNT_WORK"
+      else
+        echo "$OPENVPN_TUNNEL_NOT_WORKING"
+      fi
     else
       echo "$OPENVPN_TUNNEL_NOT_WORKING"
     fi
   fi
 
   # Check OpenVPN redirect-gateway
-  if grep -q redirect-gateway /etc/openvpn/*; then
+  if [ -d /etc/openvpn ] && grep -rq redirect-gateway /etc/openvpn/ 2>/dev/null; then
     checkpoint_false "$OPENVPN_REDIRECT_GATEWAY_ENABLED"
   else
     checkpoint_true "$OPENVPN_REDIRECT_GATEWAY_DISABLED"
@@ -503,13 +545,12 @@ if list_installed | grep -q sing-box; then
 
     # Check traffic
     IP_EXTERNAL=$(curl -s ifconfig.me)
-    IFCONFIG=$(nslookup -type=a ifconfig.me | awk '/^Address: / {print $2}')
 
     IP_VPN=$(curl --interface tun0 -s ifconfig.me)
 
     SINGBOX_WORKING=$(update_vpn_ip "$SINGBOX_WORKING_TEMPLATE" "$IP_VPN")
 
-    if [ "$IP_EXTERNAL" != $IP_VPN ]; then
+    if [ "$IP_EXTERNAL" != "$IP_VPN" ]; then
       checkpoint_true "$SINGBOX_WORKING"
     else
       checkpoint_false "$SINGBOX_ROUTING_DOESNT_WORK"
@@ -535,13 +576,12 @@ if command -v tun2socks >/dev/null 2>&1; then
   fi
 
   IP_EXTERNAL=$(curl -s ifconfig.me)
-  IFCONFIG=$(nslookup -type=a ifconfig.me | awk '/^Address: / {print $2}')
 
   IP_VPN=$(curl --interface tun0 -s ifconfig.me)
 
   TUN2SOCKS_WORKING=$(update_vpn_ip "$TUN2SOCKS_WORKING_TEMPLATE" "$IP_VPN")
 
-  if [ "$IP_EXTERNAL" != $IP_VPN ]; then
+  if [ "$IP_EXTERNAL" != "$IP_VPN" ]; then
     checkpoint_true "$TUN2SOCKS_WORKING"
   else
     checkpoint_false "$TUN2SOCKS_ROUTING_DOESNT_WORK"
@@ -691,10 +731,14 @@ case $COMMAND in
     # Create dump
     printf "\n$COLOR_BOLD_CYAN$DUMP_CREATION$COLOR_RESET\n"
     date >$DUMP_PATH
-    $HIVPN_SCRIPT_PATH start >>$DUMP_PATH 2>&1
-    $GETDOMAINS_SCRIPT_PATH start >>$DUMP_PATH 2>&1
+    if [ -x "$HIVPN_SCRIPT_PATH" ]; then
+      $HIVPN_SCRIPT_PATH start >>$DUMP_PATH 2>&1
+    fi
+    if [ -x "$GETDOMAINS_SCRIPT_PATH" ]; then
+      $GETDOMAINS_SCRIPT_PATH start >>$DUMP_PATH 2>&1
+    fi
     uci show firewall >>$DUMP_PATH
-    uci show network | sed -r 's/(.*private_key=|.*preshared_key=|.*public_key=|.*endpoint_host=|.*wan.ipaddr=|.*wan.netmask=|.*wan.gateway=|.*wan.dns|.*.macaddr=).*/\1REMOVED/' >>$DUMP_PATH
+    uci show network | sed -E 's/(.*private_key=|.*preshared_key=|.*public_key=|.*endpoint_host=|.*wan.ipaddr=|.*wan.netmask=|.*wan.gateway=|.*wan.dns|.*.macaddr=).*/\1REMOVED/' >>$DUMP_PATH
     printf "$DUMP_DETAILS\n"
     ;;
   dns)
@@ -707,7 +751,7 @@ case $COMMAND in
     echo "1. $IS_DNS_TRAFFIC_BLOCKED"
 
     for i in $DNS_SERVERS; do
-      if nslookup -type=a -timeout=2 -retry=1 itdog.info $i | grep -q "timed out"; then
+      if nslookup itdog.info "$i" 2>&1 | grep -q "timed out\|can't resolve\|NXDOMAIN"; then
         checkpoint_false "$i"
       else
         checkpoint_true "$i"
@@ -727,7 +771,7 @@ case $COMMAND in
     echo "3. $RESPONSE_NOT_CONTAINS_127_0_0_8"
 
     for i in $DOMAINS; do
-      if nslookup -type=a -timeout=2 -retry=1 $i | awk '/^Address: / {print $2}' | grep -q -E '127\.[0-9]{1,3}\.'; then
+      if nslookup "$i" 2>&1 | awk '/^Address: / {print $2}' | grep -q -E '127\.[0-9]{1,3}\.'; then
         checkpoint_false "$i"
       else
         checkpoint_true "$i"
@@ -736,8 +780,8 @@ case $COMMAND in
 
     echo "4. $ONE_IP_FOR_TWO_DOMAINS"
 
-    FIRSTIP=$(nslookup -type=a instagram.com | awk '/^Address: / {print $2}')
-    SECONDIP=$(nslookup -type=a facebook.com | awk '/^Address: / {print $2}')
+    FIRSTIP=$(nslookup instagram.com | awk '/^Address: / {print $2}')
+    SECONDIP=$(nslookup facebook.com | awk '/^Address: / {print $2}')
 
     if [ "$FIRSTIP" = "$SECONDIP" ]; then
       checkpoint_false "$IPS_ARE_THE_SAME"
@@ -748,7 +792,7 @@ case $COMMAND in
     echo "5. $RESPONSE_IS_NOT_BLANK"
 
     for i in $DOMAINS; do
-      if nslookup -type=a -timeout=2 -retry=1 $i | awk '/^Address: / {print $2}' | grep -q -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'; then
+      if nslookup "$i" 2>&1 | awk '/^Address: / {print $2}' | grep -q -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}'; then
         checkpoint_true "$i"
       else
         checkpoint_false "$i"
@@ -758,7 +802,7 @@ case $COMMAND in
     echo "6. $DNS_POISONING_CHECK"
 
     DOHIP=$(curl -s -H "accept: application/dns-json" "https://1.1.1.1/dns-query?name=facebook.com&type=A" | awk -F"data\":\"" '/data":"/{print $2}' | grep -oE '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}')
-    OPENIP=$(nslookup -type=a -timeout=2 facebook.com 1.1.1.1 | awk '/^Address: / {print $2}')
+    OPENIP=$(nslookup facebook.com 1.1.1.1 | awk '/^Address: / {print $2}')
 
     if [ "$DOHIP" = "$OPENIP" ]; then
       checkpoint_true "$IPS_ARE_THE_SAME"
