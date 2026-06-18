@@ -141,6 +141,7 @@ set_language_en() {
   DNS_POISONING_CHECK="Сomparing response from unencrypted DNS and DoH (DNS poisoning)"
   TELEGRAM_CHANNEL="Telegram channel"
   TELEGRAM_CHAT="Telegram chat"
+  VPN_TABLE_NOT_DEFINED="VPN routing table 'vpn' is not defined in /etc/iproute2/rt_tables"
 }
 
 set_language_ru() {
@@ -244,6 +245,7 @@ set_language_ru() {
   DNS_POISONING_CHECK="Сравниваем ответ от незащищенного DNS и DoH (Подмена DNS)"
   TELEGRAM_CHANNEL="Telegram канал"
   TELEGRAM_CHAT="Telegram чат"
+  VPN_TABLE_NOT_DEFINED="Таблица маршрутизации 'vpn' не определена в /etc/iproute2/rt_tables"
 }
 
 checkpoint_true() {
@@ -386,6 +388,13 @@ if curl -6 -s https://ifconfig.io | egrep -q "(::)?[0-9a-fA-F]{1,4}(::?[0-9a-fA-
 fi
 
 # Tunnels
+VPN_TABLE_DEFINED=false
+if grep -q "[[:space:]]vpn$" /etc/iproute2/rt_tables 2>/dev/null; then
+  VPN_TABLE_DEFINED=true
+else
+  checkpoint_false "$VPN_TABLE_NOT_DEFINED"
+fi
+
 WIREGUARD=$(list_installed | grep -c wireguard-tools)
 if [ $WIREGUARD -eq 1 ]; then
   checkpoint_true "$WIREGUARD_TOOLS_INSTALLED"
@@ -414,9 +423,13 @@ if [ "$WG" == true ]; then
   fi
 
   # Check route table
-  ROUTE_TABLE=$(ip route show table vpn | grep -c "default dev wg0")
-  if [ $ROUTE_TABLE -eq 1 ]; then
-    checkpoint_true "$WIREGUARD_ROUTING_TABLE_EXISTS"
+  if [ "$VPN_TABLE_DEFINED" = true ]; then
+    ROUTE_TABLE=$(ip route show table vpn | grep -c "default dev wg0")
+    if [ $ROUTE_TABLE -eq 1 ]; then
+      checkpoint_true "$WIREGUARD_ROUTING_TABLE_EXISTS"
+    else
+      checkpoint_false "$WIREGUARD_ROUTING_TABLE_DOESNT_EXIST"
+    fi
   else
     checkpoint_false "$WIREGUARD_ROUTING_TABLE_DOESNT_EXIST"
   fi
@@ -448,8 +461,12 @@ if [ "$OVPN" == true ]; then
   fi
 
   # Check route table
-  if ip route show table vpn | grep -q "default dev tun0"; then
-    checkpoint_true "$OPENVPN_ROUTING_TABLE_EXISTS"
+  if [ "$VPN_TABLE_DEFINED" = true ]; then
+    if ip route show table vpn | grep -q "default dev tun0"; then
+      checkpoint_true "$OPENVPN_ROUTING_TABLE_EXISTS"
+    else
+      checkpoint_false "$OPENVPN_ROUTING_TABLE_DOESNT_EXIST"
+    fi
   else
     checkpoint_false "$OPENVPN_ROUTING_TABLE_DOESNT_EXIST"
   fi
@@ -459,8 +476,12 @@ if list_installed | grep -q sing-box; then
   checkpoint_true "$SINGBOX_INSTALLED"
 
   # Check route table
-  if ip route show table vpn | grep -q "default dev tun0"; then
-    checkpoint_true "$SINGBOX_ROUTING_TABLE_EXISTS"
+  if [ "$VPN_TABLE_DEFINED" = true ]; then
+    if ip route show table vpn | grep -q "default dev tun0"; then
+      checkpoint_true "$SINGBOX_ROUTING_TABLE_EXISTS"
+    else
+      checkpoint_false "$SINGBOX_ROUTING_TABLE_DOESNT_EXIST"
+    fi
   else
     checkpoint_false "$SINGBOX_ROUTING_TABLE_DOESNT_EXIST"
   fi
@@ -499,8 +520,12 @@ if which tun2socks | grep -q tun2socks; then
   checkpoint_true "$TUN2SOCKS_INSTALLED"
 
   # Check route table
-  if ip route show table vpn | grep -q "default dev tun0"; then
-    checkpoint_true "$TUN2SOCKS_ROUTING_TABLE_EXISTS"
+  if [ "$VPN_TABLE_DEFINED" = true ]; then
+    if ip route show table vpn | grep -q "default dev tun0"; then
+      checkpoint_true "$TUN2SOCKS_ROUTING_TABLE_EXISTS"
+    else
+      checkpoint_false "$TUN2SOCKS_ROUTING_TABLE_DOESNT_EXIST"
+    fi
   else
     checkpoint_false "$TUN2SOCKS_ROUTING_TABLE_DOESNT_EXIST"
   fi
@@ -523,9 +548,9 @@ fi
 
 # vpn_domains set
 vpn_domain_ipset_id=$(uci show firewall | grep -E '@ipset.*vpn_domains' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_domain_ipset_string=$(uci show firewall.@ipset[$vpn_domain_ipset_id] | grep -c "name='vpn_domains'\|match='dst_net'")
+vpn_domain_ipset_string=$(uci show firewall.@ipset[$vpn_domain_ipset_id] 2>/dev/null | grep -c "name='vpn_domains'\|match='dst_net'")
 vpn_domain_rule_id=$(uci show firewall | grep -E '@rule.*vpn_domains' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_domain_rule_string=$(uci show firewall.@rule[$vpn_domain_rule_id] | grep -c "name='mark_domains'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_domains'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
+vpn_domain_rule_string=$(uci show firewall.@rule[$vpn_domain_rule_id] 2>/dev/null | grep -c "name='mark_domains'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_domains'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
 
 if [ $((vpn_domain_ipset_string + vpn_domain_rule_string)) -eq 10 ]; then
   checkpoint_true "$VPN_DOMAINS_SET_EXISTS"
@@ -550,9 +575,9 @@ fi
 
 # vpn_ip set
 vpn_ip_ipset_id=$(uci show firewall | grep -E '@ipset.*vpn_ip' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_ip_ipset_string=$(uci show firewall.@ipset[$vpn_ip_ipset_id] | grep -c "name='vpn_ip'\|match='dst_net'\|loadfile='/tmp/lst/ip.lst'")
+vpn_ip_ipset_string=$(uci show firewall.@ipset[$vpn_ip_ipset_id] 2>/dev/null | grep -c "name='vpn_ip'\|match='dst_net'\|loadfile='/tmp/lst/ip.lst'")
 vpn_ip_rule_id=$(uci show firewall | grep -E '@rule.*vpn_ip' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_ip_rule_string=$(uci show firewall.@rule[$vpn_ip_rule_id] | grep -c "name='mark_ip'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_ip'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
+vpn_ip_rule_string=$(uci show firewall.@rule[$vpn_ip_rule_id] 2>/dev/null | grep -c "name='mark_ip'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_ip'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
 
 if [ $((vpn_ip_ipset_string + vpn_ip_rule_string)) -eq 11 ]; then
   checkpoint_true "$VPN_IP_SET_EXISTS"
@@ -569,9 +594,9 @@ fi
 
 # vpn_subnet set
 vpn_subnet_ipset_id=$(uci show firewall | grep -E '@ipset.*vpn_subnet' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_subnet_ipset_string=$(uci show firewall.@ipset[$vpn_subnet_ipset_id] | grep -c "name='vpn_subnets'\|match='dst_net'\|loadfile='/tmp/lst/subnet.lst'")
+vpn_subnet_ipset_string=$(uci show firewall.@ipset[$vpn_subnet_ipset_id] 2>/dev/null | grep -c "name='vpn_subnets'\|match='dst_net'\|loadfile='/tmp/lst/subnet.lst'")
 vpn_subnet_rule_id=$(uci show firewall | grep -E '@rule.*vpn_subnet' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_subnet_rule_string=$(uci show firewall.@rule[$vpn_subnet_rule_id] | grep -c "name='mark_subnet'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_subnets'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
+vpn_subnet_rule_string=$(uci show firewall.@rule[$vpn_subnet_rule_id] 2>/dev/null | grep -c "name='mark_subnet'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_subnets'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
 
 if [ $((vpn_subnet_ipset_string + vpn_subnet_rule_string)) -eq 11 ]; then
   checkpoint_true "$VPN_SUBNET_SET_EXISTS"
@@ -588,9 +613,9 @@ fi
 
 # vpn_community set
 vpn_community_ipset_id=$(uci show firewall | grep -E '@ipset.*vpn_community' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_community_ipset_string=$(uci show firewall.@ipset[$vpn_community_ipset_id] | grep -c "name='vpn_community'\|match='dst_net'\|loadfile='/tmp/lst/community.lst'")
+vpn_community_ipset_string=$(uci show firewall.@ipset[$vpn_community_ipset_id] 2>/dev/null | grep -c "name='vpn_community'\|match='dst_net'\|loadfile='/tmp/lst/community.lst'")
 vpn_community_rule_id=$(uci show firewall | grep -E '@rule.*vpn_community' | awk -F '[][{}]' '{print $2}' | head -n 1)
-vpn_community_rule_string=$(uci show firewall.@rule[$vpn_community_rule_id] | grep -c "name='mark_community'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_community'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
+vpn_community_rule_string=$(uci show firewall.@rule[$vpn_community_rule_id] 2>/dev/null | grep -c "name='mark_community'\|src='lan'\|dest='*'\|proto='all'\|ipset='vpn_community'\|set_mark='0x1'\|target='MARK'\|family='ipv4'")
 
 if [ $((vpn_community_ipset_string + vpn_community_rule_string)) -eq 11 ]; then
   checkpoint_true "$VPN_COMMUNITY_SET_EXISTS"
@@ -629,8 +654,9 @@ if list_installed | grep -q dnscrypt-proxy2; then
     output_21
   fi
 
-  DNSMASQ_STRING=$(uci show dhcp.@dnsmasq[0] | grep -c "127.0.0.53#53\|noresolv='1'")
-  if [ $DNSMASQ_STRING -eq 2 ]; then
+  DNSMASQ_FWD=$(uci show dhcp.@dnsmasq[0] 2>/dev/null | grep -c "127.0.0.53#53\|127.0.0.1#5353")
+  DNSMASQ_NORESOLV=$(uci show dhcp.@dnsmasq[0] 2>/dev/null | grep -c "noresolv='1'")
+  if [ $DNSMASQ_FWD -ge 1 ] && [ $DNSMASQ_NORESOLV -ge 1 ]; then
     checkpoint_true "$DNSMASQ_CONFIG_FOR_DNSCRYPT_OK"
   else
     checkpoint_false "$DNSMASQ_CONFIG_FOR_DNSCRYPT_ERROR"
@@ -647,8 +673,9 @@ if list_installed | grep -q stubby; then
     output_21
   fi
 
-  STUBBY_STRING=$(uci show dhcp.@dnsmasq[0] | grep -c "127.0.0.1#5453\|noresolv='1'")
-  if [ $STUBBY_STRING -eq 2 ]; then
+  STUBBY_FWD=$(uci show dhcp.@dnsmasq[0] 2>/dev/null | grep -c "127.0.0.1#5453")
+  STUBBY_NORESOLV=$(uci show dhcp.@dnsmasq[0] 2>/dev/null | grep -c "noresolv='1'")
+  if [ $STUBBY_FWD -ge 1 ] && [ $STUBBY_NORESOLV -ge 1 ]; then
     checkpoint_true "$DNSMASQ_CONFIG_FOR_STUBBY_OK"
   else
     checkpoint_false "$DNSMASQ_CONFIG_FOR_STUBBY_ERROR"
