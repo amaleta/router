@@ -11,17 +11,19 @@ delete_uci_section() {
     local _i
 
     section_id=$(uci show "$config" 2>/dev/null | grep -E "@${type}.*name=.${name_pattern}." | awk -F '[][{}]' '{print $2}' | head -n 1)
-    if [ -n "$section_id" ]; then
-        _i=0
-        while uci -q delete "${config}.@${type}[${section_id}]" && [ "$_i" -lt 20 ]; do
-            _i=$((_i + 1))
-        done
-        if [ "$_i" -gt 0 ]; then
-            echo "  Removed ${config}.@${type}[${section_id}] (${name_pattern})"
-        else
-            echo "  ERROR: failed to delete ${config}.@${type} (${name_pattern})" >&2
-            ERRORS=$((ERRORS + 1))
-        fi
+    if [ -z "$section_id" ]; then
+        return 0
+    fi
+
+    _i=0
+    while uci -q delete "${config}.@${type}[${section_id}]" && [ "$_i" -lt 20 ]; do
+        _i=$((_i + 1))
+    done
+    if [ "$_i" -gt 0 ]; then
+        echo "  Removed ${config}.@${type}[${section_id}] (${name_pattern})"
+    else
+        echo "  ERROR: uci delete failed for ${config}.@${type}[${section_id}] (${name_pattern})" >&2
+        ERRORS=$((ERRORS + 1))
     fi
 }
 
@@ -103,6 +105,7 @@ if [ -f /etc/init.d/getdomains ]; then
 fi
 
 echo "=== Restarting services ==="
+echo "WARNING: network restart will drop SSH connection. Reconnect after ~10 seconds."
 /etc/init.d/firewall restart 2>/dev/null || { echo "ERROR: firewall restart failed" >&2; ERRORS=$((ERRORS + 1)); }
 /etc/init.d/network restart 2>/dev/null || { echo "ERROR: network restart failed" >&2; ERRORS=$((ERRORS + 1)); }
 /etc/init.d/dnsmasq restart 2>/dev/null || { echo "ERROR: dnsmasq restart failed" >&2; ERRORS=$((ERRORS + 1)); }
@@ -118,6 +121,10 @@ if [ "$ERRORS" -gt 0 ]; then
     echo "Completed with $ERRORS error(s). Review output above."
     exit 1
 else
-    echo "Done. Tunnels, proxies, zones and forwarding are left intact."
-    echo "Dnscrypt and stubby are also not touched."
+    echo "Done. VPN routing rules, firewall ipsets/rules, domain lists and scripts removed."
+    echo "The following are intentionally left intact:"
+    echo "  - WireGuard/AmneziaWG/OpenVPN/sing-box/tun2socks tunnel interfaces"
+    echo "  - Firewall zones and forwarding rules for tunnels"
+    echo "  - Dnscrypt-proxy2 and stubby configurations"
+    echo "Remove these manually if needed."
 fi
