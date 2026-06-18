@@ -435,7 +435,7 @@ dnsmasqfull() {
 }
 
 dnsmasqconfdir() {
-    if [ $VERSION_ID -ge 24 ]; then
+    if [ "$VERSION_ID" -ge 24 ]; then
         if uci get dhcp.@dnsmasq[0].confdir | grep -q /tmp/dnsmasq.d; then
             printf "\033[32;1mconfdir already set\033[0m\n"
         else
@@ -443,6 +443,15 @@ dnsmasqconfdir() {
             uci set dhcp.@dnsmasq[0].confdir='/tmp/dnsmasq.d'
             uci commit dhcp
         fi
+    fi
+    # Disable AAAA (IPv6) DNS responses — vpn_domains set is IPv4 only,
+    # IPv6 addresses bypass VPN routing
+    if uci get dhcp.@dnsmasq[0].filter_aaaa 2>/dev/null | grep -q '1'; then
+        printf "\033[32;1mfilter_aaaa already set\033[0m\n"
+    else
+        printf "\033[32;1mDisabling IPv6 DNS (filter_aaaa)\033[0m\n"
+        uci set dhcp.@dnsmasq[0].filter_aaaa='1'
+        uci commit dhcp
     fi
 }
 
