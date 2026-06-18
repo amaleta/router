@@ -2,6 +2,7 @@
 
 #set -x
 
+ERRORS=0
 PKG_MANAGER=""
 PKG_EXT=""
 
@@ -221,7 +222,7 @@ install_awg_packages() {
     fi
 
     # Устанавливаем русскую локализацию только для AWG 2.0
-    if [ "$AWG_VERSION" = "2.0" ] && [ $ASK_FOR_TRANSLATION = 1 ]; then
+    if [ "$AWG_VERSION" = "2.0" ] && [ "$ASK_FOR_TRANSLATION" = 1 ]; then
         printf "\033[32;1mУстанавливаем пакет с русской локализацией? Install Russian language pack? (y/n) [n]: \033[0m\n"
         read INSTALL_RU_LANG
         INSTALL_RU_LANG=${INSTALL_RU_LANG:-n}
@@ -257,46 +258,68 @@ configure_amneziawg_interface() {
     PROTO="amneziawg"
     ZONE_NAME="awg1"
 
-    read -r -p "Enter the private key (from [Interface]):"$'\n' AWG_PRIVATE_KEY_INT
+    printf "Enter the private key (from [Interface]):\n"
+    read -r AWG_PRIVATE_KEY_INT
 
     while true; do
-        read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):"$'\n' AWG_IP
-        if echo "$AWG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
+        printf "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):\n"
+        read -r AWG_IP
+        if echo "$AWG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
             break
         else
             echo "This IP is not valid. Please repeat"
         fi
     done
 
-    read -r -p "Enter the public key (from [Peer]):"$'\n' AWG_PUBLIC_KEY_INT
-    read -r -p "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:"$'\n' AWG_PRESHARED_KEY_INT
-    read -r -p "Enter Endpoint host without port (Domain or IP) (from [Peer]):"$'\n' AWG_ENDPOINT_INT
+    printf "Enter the public key (from [Peer]):\n"
+    read -r AWG_PUBLIC_KEY_INT
+    printf "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:\n"
+    read -r AWG_PRESHARED_KEY_INT
+    printf "Enter Endpoint host without port (Domain or IP) (from [Peer]):\n"
+    read -r AWG_ENDPOINT_INT
 
-    read -r -p "Enter Endpoint host port (from [Peer]) [51820]:"$'\n' AWG_ENDPOINT_PORT_INT
+    printf "Enter Endpoint host port (from [Peer]) [51820]:\n"
+    read -r AWG_ENDPOINT_PORT_INT
     AWG_ENDPOINT_PORT_INT=${AWG_ENDPOINT_PORT_INT:-51820}
     if [ "$AWG_ENDPOINT_PORT_INT" = '51820' ]; then
-        echo $AWG_ENDPOINT_PORT_INT
+        echo "$AWG_ENDPOINT_PORT_INT"
     fi
 
-    read -r -p "Enter Jc value (from [Interface]):"$'\n' AWG_JC
-    read -r -p "Enter Jmin value (from [Interface]):"$'\n' AWG_JMIN
-    read -r -p "Enter Jmax value (from [Interface]):"$'\n' AWG_JMAX
-    read -r -p "Enter S1 value (from [Interface]):"$'\n' AWG_S1
-    read -r -p "Enter S2 value (from [Interface]):"$'\n' AWG_S2
-    read -r -p "Enter H1 value (from [Interface]):"$'\n' AWG_H1
-    read -r -p "Enter H2 value (from [Interface]):"$'\n' AWG_H2
-    read -r -p "Enter H3 value (from [Interface]):"$'\n' AWG_H3
-    read -r -p "Enter H4 value (from [Interface]):"$'\n' AWG_H4
+    printf "Enter Jc value (from [Interface]):\n"
+    read -r AWG_JC
+    printf "Enter Jmin value (from [Interface]):\n"
+    read -r AWG_JMIN
+    printf "Enter Jmax value (from [Interface]):\n"
+    read -r AWG_JMAX
+    printf "Enter S1 value (from [Interface]):\n"
+    read -r AWG_S1
+    printf "Enter S2 value (from [Interface]):\n"
+    read -r AWG_S2
+    printf "Enter H1 value (from [Interface]):\n"
+    read -r AWG_H1
+    printf "Enter H2 value (from [Interface]):\n"
+    read -r AWG_H2
+    printf "Enter H3 value (from [Interface]):\n"
+    read -r AWG_H3
+    printf "Enter H4 value (from [Interface]):\n"
+    read -r AWG_H4
 
     # AWG 2.0 новые параметры
     if [ "$AWG_VERSION" = "2.0" ]; then
-        read -r -p "Enter S3 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_S3
-        read -r -p "Enter S4 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_S4
-        read -r -p "Enter I1 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_I1
-        read -r -p "Enter I2 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_I2
-        read -r -p "Enter I3 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_I3
-        read -r -p "Enter I4 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_I4
-        read -r -p "Enter I5 value (from [Interface]) [optional, leave blank to skip]:"$'\n' AWG_I5
+        printf "Enter S3 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_S3
+        printf "Enter S4 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_S4
+        printf "Enter I1 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_I1
+        printf "Enter I2 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_I2
+        printf "Enter I3 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_I3
+        printf "Enter I4 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_I4
+        printf "Enter I5 value (from [Interface]) [optional, leave blank to skip]:\n"
+        read -r AWG_I5
     fi
 
     uci set network.${INTERFACE_NAME}=interface
@@ -326,7 +349,7 @@ configure_amneziawg_interface() {
         [ -n "$AWG_I5" ] && uci set network.${INTERFACE_NAME}.awg_i5=$AWG_I5
     fi
 
-    if ! uci show network | grep -q ${CONFIG_NAME}; then
+    if ! uci show network | grep -q "${CONFIG_NAME}"; then
         uci add network ${CONFIG_NAME}
     fi
 
@@ -340,7 +363,7 @@ configure_amneziawg_interface() {
     uci set network.@${CONFIG_NAME}[0].allowed_ips='0.0.0.0/0'
     uci add_list network.@${CONFIG_NAME}[0].allowed_ips='::/0'
     uci set network.@${CONFIG_NAME}[0].endpoint_port=$AWG_ENDPOINT_PORT_INT
-    uci commit network
+    uci commit network || { echo "ERROR: uci commit network failed" >&2; ERRORS=$((ERRORS + 1)); }
 
     if ! uci show firewall | grep -q "@zone.*name='${ZONE_NAME}'"; then
         printf "\033[32;1mZone Create\033[0m\n"
@@ -353,7 +376,7 @@ configure_amneziawg_interface() {
         uci set firewall.@zone[-1].masq='1'
         uci set firewall.@zone[-1].mtu_fix='1'
         uci set firewall.@zone[-1].family='ipv4'
-        uci commit firewall
+        uci commit firewall || { echo "ERROR: uci commit firewall failed" >&2; ERRORS=$((ERRORS + 1)); }
     fi
 
     if ! uci show firewall | grep -q "@forwarding.*name='${ZONE_NAME}'"; then
@@ -364,10 +387,11 @@ configure_amneziawg_interface() {
         uci set firewall.@forwarding[-1].dest=${ZONE_NAME}
         uci set firewall.@forwarding[-1].src='lan'
         uci set firewall.@forwarding[-1].family='ipv4'
-        uci commit firewall
+        uci commit firewall || { echo "ERROR: uci commit firewall forwarding failed" >&2; ERRORS=$((ERRORS + 1)); }
     fi
 
-    service network restart
+    /etc/init.d/firewall restart 2>/dev/null || { echo "ERROR: firewall restart failed" >&2; ERRORS=$((ERRORS + 1)); }
+    /etc/init.d/network restart 2>/dev/null || { echo "ERROR: network restart failed" >&2; ERRORS=$((ERRORS + 1)); }
 }
 
 ASK_FOR_TRANSLATION=1
@@ -389,6 +413,11 @@ check_repo
 install_awg_packages
 
 if [ "$ASK_FOR_INTERFACE_CONFIG" = 0 ]; then
+    if [ "$ERRORS" -gt 0 ]; then
+        echo "Completed with $ERRORS error(s). Review output above."
+        exit 1
+    fi
+    echo "Done. AmneziaWG installation completed successfully."
     exit 0
 fi
 
@@ -399,4 +428,12 @@ if [ "$IS_SHOULD_CONFIGURE_AWG_INTERFACE" = "y" ] || [ "$IS_SHOULD_CONFIGURE_AWG
     configure_amneziawg_interface
 else
     printf "\033[32;1mSkipping amneziawg interface configuration.\033[0m\n"
+fi
+
+echo ""
+if [ "$ERRORS" -gt 0 ]; then
+    echo "Completed with $ERRORS error(s). Review output above."
+    exit 1
+else
+    echo "Done. AmneziaWG installation completed successfully."
 fi
