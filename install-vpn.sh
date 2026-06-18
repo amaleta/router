@@ -635,7 +635,7 @@ add_dns_resolver() {
             printf "\033[32;1mInstalled dnscrypt-proxy2\033[0m\n"
             pkg_install dnscrypt-proxy2
             if grep -q "# server_names" /etc/dnscrypt-proxy2/dnscrypt-proxy.toml; then
-                sed -i "s/^# server_names =.*/server_names = [\'google\', \'cloudflare\', \'scaleway-fr\']/g" /etc/dnscrypt-proxy2/dnscrypt-proxy.toml
+                sed -i 's/^# server_names =.*/server_names = ["google", "cloudflare", "scaleway-fr"]/g' /etc/dnscrypt-proxy2/dnscrypt-proxy.toml
             fi
 
             printf "\033[32;1mDNSCrypt restart\033[0m\n"
@@ -761,17 +761,23 @@ start () {
 EOF
 cat << 'EOF' >> /etc/init.d/getdomains
     count=0
-    while true; do
+    mkdir -p /tmp/dnsmasq.d
+    while [ "$count" -lt 10 ]; do
         if curl -m 3 -sf -o /dev/null github.com; then
             curl -f $DOMAINS --output /tmp/dnsmasq.d/domains.lst
             break
         else
             echo "GitHub is not available. Check the internet availability [$count]"
             count=$((count+1))
+            sleep 5
         fi
     done
 
-    if dnsmasq --conf-file=/tmp/dnsmasq.d/domains.lst --test 2>&1 | grep -q "syntax check OK"; then
+    if [ "$count" -ge 10 ]; then
+        echo "Failed to reach GitHub after 10 attempts. Domain list not downloaded."
+    fi
+
+    if [ -f /tmp/dnsmasq.d/domains.lst ] && dnsmasq --conf-file=/tmp/dnsmasq.d/domains.lst --test 2>&1 | grep -q "syntax check OK"; then
         /etc/init.d/dnsmasq restart
     fi
 }
