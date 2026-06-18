@@ -421,11 +421,10 @@ dnsmasqfull() {
     else
         printf "\033[32;1mInstalled dnsmasq-full\033[0m\n"
         if [ "$PKG_MANAGER" = "apk" ]; then
-            pkg_remove dnsmasq
-            pkg_install dnsmasq-full
+            apk add --force-overwrite dnsmasq-full
         else
             cd /tmp/ && opkg download dnsmasq-full
-            opkg remove dnsmasq && opkg install dnsmasq-full --cache /tmp/
+            opkg remove dnsmasq --force-depends && opkg install dnsmasq-full --cache /tmp/
         fi
 
         [ -f /etc/config/dhcp-opkg ] && cp /etc/config/dhcp /etc/config/dhcp-old && mv /etc/config/dhcp-opkg /etc/config/dhcp
@@ -634,7 +633,7 @@ add_dns_resolver() {
             printf "\033[32;1mInstalled dnscrypt-proxy2\033[0m\n"
             pkg_install dnscrypt-proxy2
             if grep -q "# server_names" /etc/dnscrypt-proxy2/dnscrypt-proxy.toml; then
-                sed -i "s/^# server_names =.*/server_names = [\'google\', \'cloudflare\', \'scaleway-fr\', \'yandex\']/g" /etc/dnscrypt-proxy2/dnscrypt-proxy.toml
+                sed -i "s/^# server_names =.*/server_names = [\'google\', \'cloudflare\', \'scaleway-fr\']/g" /etc/dnscrypt-proxy2/dnscrypt-proxy.toml
             fi
 
             printf "\033[32;1mDNSCrypt restart\033[0m\n"
@@ -690,8 +689,8 @@ add_packages() {
             printf "\033[32;1mInstalling $package...\033[0m\n"
             pkg_install "$package"
 
-            if "$package" --version >/dev/null 2>&1; then
-                printf "\033[32;1m$package was successfully installed and available\033[0m\n"
+            if is_pkg_installed "$package"; then
+                printf "\033[32;1m$package was successfully installed\033[0m\n"
             else
                 printf "\033[31;1mError: failed to install $package\033[0m\n"
                 exit 1
@@ -1068,7 +1067,8 @@ install_awg_packages() {
         echo "kmod-amneziawg already installed"
     else
         KMOD_AMNEZIAWG_FILENAME=$(download_awg_package "kmod-amneziawg" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-        if [ $? -eq 0 ]; then
+        _dl_status=$?
+        if [ "$_dl_status" -eq 0 ]; then
             echo "kmod-amneziawg file downloaded successfully"
         else
             echo "Error downloading kmod-amneziawg. Please, install kmod-amneziawg manually and run the script again"
@@ -1076,8 +1076,8 @@ install_awg_packages() {
         fi
 
         pkg_install_local "$AWG_DIR/$KMOD_AMNEZIAWG_FILENAME"
-
-        if [ $? -eq 0 ]; then
+        _inst_status=$?
+        if [ "$_inst_status" -eq 0 ]; then
             echo "kmod-amneziawg installed successfully"
         else
             echo "Error installing kmod-amneziawg. Please, install kmod-amneziawg manually and run the script again"
@@ -1089,7 +1089,8 @@ install_awg_packages() {
         echo "amneziawg-tools already installed"
     else
         AMNEZIAWG_TOOLS_FILENAME=$(download_awg_package "amneziawg-tools" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-        if [ $? -eq 0 ]; then
+        _dl_status=$?
+        if [ "$_dl_status" -eq 0 ]; then
             echo "amneziawg-tools file downloaded successfully"
         else
             echo "Error downloading amneziawg-tools. Please, install amneziawg-tools manually and run the script again"
@@ -1097,8 +1098,8 @@ install_awg_packages() {
         fi
 
         pkg_install_local "$AWG_DIR/$AMNEZIAWG_TOOLS_FILENAME"
-
-        if [ $? -eq 0 ]; then
+        _inst_status=$?
+        if [ "$_inst_status" -eq 0 ]; then
             echo "amneziawg-tools installed successfully"
         else
             echo "Error installing amneziawg-tools. Please, install amneziawg-tools manually and run the script again"
@@ -1111,7 +1112,8 @@ install_awg_packages() {
         echo "$LUCI_PACKAGE_NAME already installed"
     else
         LUCI_AMNEZIAWG_FILENAME=$(download_awg_package "$LUCI_PACKAGE_NAME" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-        if [ $? -eq 0 ]; then
+        _dl_status=$?
+        if [ "$_dl_status" -eq 0 ]; then
             echo "$LUCI_PACKAGE_NAME file downloaded successfully"
         else
             echo "Error downloading $LUCI_PACKAGE_NAME. Please, install $LUCI_PACKAGE_NAME manually and run the script again"
@@ -1119,8 +1121,8 @@ install_awg_packages() {
         fi
 
         pkg_install_local "$AWG_DIR/$LUCI_AMNEZIAWG_FILENAME"
-
-        if [ $? -eq 0 ]; then
+        _inst_status=$?
+        if [ "$_inst_status" -eq 0 ]; then
             echo "$LUCI_PACKAGE_NAME installed successfully"
         else
             echo "Error installing $LUCI_PACKAGE_NAME. Please, install $LUCI_PACKAGE_NAME manually and run the script again"

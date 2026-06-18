@@ -161,7 +161,8 @@ install_awg_packages() {
         echo "kmod-amneziawg already installed"
     else
         KMOD_AMNEZIAWG_FILENAME=$(download_package "kmod-amneziawg" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-        if [ $? -eq 0 ]; then
+        _dl_status=$?
+        if [ "$_dl_status" -eq 0 ]; then
             echo "kmod-amneziawg file downloaded successfully"
         else
             echo "Error downloading kmod-amneziawg. Please, install kmod-amneziawg manually and run the script again"
@@ -169,8 +170,8 @@ install_awg_packages() {
         fi
 
         install_local_pkg "$AWG_DIR/$KMOD_AMNEZIAWG_FILENAME"
-
-        if [ $? -eq 0 ]; then
+        _inst_status=$?
+        if [ "$_inst_status" -eq 0 ]; then
             echo "kmod-amneziawg installed successfully"
         else
             echo "Error installing kmod-amneziawg. Please, install kmod-amneziawg manually and run the script again"
@@ -182,7 +183,8 @@ install_awg_packages() {
         echo "amneziawg-tools already installed"
     else
         AMNEZIAWG_TOOLS_FILENAME=$(download_package "amneziawg-tools" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-        if [ $? -eq 0 ]; then
+        _dl_status=$?
+        if [ "$_dl_status" -eq 0 ]; then
             echo "amneziawg-tools file downloaded successfully"
         else
             echo "Error downloading amneziawg-tools. Please, install amneziawg-tools manually and run the script again"
@@ -190,8 +192,8 @@ install_awg_packages() {
         fi
 
         install_local_pkg "$AWG_DIR/$AMNEZIAWG_TOOLS_FILENAME"
-
-        if [ $? -eq 0 ]; then
+        _inst_status=$?
+        if [ "$_inst_status" -eq 0 ]; then
             echo "amneziawg-tools installed successfully"
         else
             echo "Error installing amneziawg-tools. Please, install amneziawg-tools manually and run the script again"
@@ -204,7 +206,8 @@ install_awg_packages() {
         echo "$LUCI_PACKAGE_NAME already installed"
     else
         LUCI_AMNEZIAWG_FILENAME=$(download_package "$LUCI_PACKAGE_NAME" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-        if [ $? -eq 0 ]; then
+        _dl_status=$?
+        if [ "$_dl_status" -eq 0 ]; then
             echo "$LUCI_PACKAGE_NAME file downloaded successfully"
         else
             echo "Error downloading $LUCI_PACKAGE_NAME. Please, install $LUCI_PACKAGE_NAME manually and run the script again"
@@ -212,8 +215,8 @@ install_awg_packages() {
         fi
 
         install_local_pkg "$AWG_DIR/$LUCI_AMNEZIAWG_FILENAME"
-
-        if [ $? -eq 0 ]; then
+        _inst_status=$?
+        if [ "$_inst_status" -eq 0 ]; then
             echo "$LUCI_PACKAGE_NAME installed successfully"
         else
             echo "Error installing $LUCI_PACKAGE_NAME. Please, install $LUCI_PACKAGE_NAME manually and run the script again"
@@ -232,10 +235,12 @@ install_awg_packages() {
                 echo "luci-i18n-amneziawg-ru already installed"
             else
                 LUCI_I18N_AMNEZIAWG_RU_FILENAME=$(download_package "luci-i18n-amneziawg-ru" "$PKGPOSTFIX_BASE" "$AWG_DIR" "${BASE_URL}v${VERSION}/")
-                if [ $? -eq 0 ]; then
+                _dl_status=$?
+                if [ "$_dl_status" -eq 0 ]; then
                     echo "luci-i18n-amneziawg-ru file downloaded successfully"
                     install_local_pkg "$AWG_DIR/$LUCI_I18N_AMNEZIAWG_RU_FILENAME"
-                    if [ $? -eq 0 ]; then
+                    _inst_status=$?
+                    if [ "$_inst_status" -eq 0 ]; then
                         echo "luci-i18n-amneziawg-ru installed successfully"
                     else
                         echo "Warning: Error installing luci-i18n-amneziawg-ru (non-critical)"
