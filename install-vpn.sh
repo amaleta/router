@@ -1150,7 +1150,8 @@ MODEL=$(cat /tmp/sysinfo/model)
 printf "\033[34;1mModel: $MODEL\033[0m\n"
 printf "\033[34;1mVersion: $OPENWRT_RELEASE\033[0m\n"
 
-# VERSION_ID is already set by os-release (e.g. "23" for OpenWrt 23.05.x)
+# Extract major version number (e.g. "25.12.4" → "25")
+VERSION_ID=${VERSION_ID%%.*}
 if [ -z "$VERSION_ID" ]; then
     VERSION_ID=$(echo "$OPENWRT_RELEASE" | grep -oE '^[0-9]+' | head -n 1)
 fi
