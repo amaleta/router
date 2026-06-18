@@ -321,27 +321,29 @@ esac
 
 # System Details
 MODEL=$(cat /tmp/sysinfo/model)
-source /etc/os-release
+. /etc/os-release
 printf "$COLOR_BOLD_BLUE$DEVICE_MODEL: $MODEL$COLOR_RESET\n"
 printf "$COLOR_BOLD_BLUE$OPENWRT_VERSION: $OPENWRT_RELEASE$COLOR_RESET\n"
 printf "$COLOR_BOLD_BLUE$CURRENT_DATE: $(date)$COLOR_RESET\n"
 
 VERSION_ID=$(echo $VERSION | awk -F. '{print $1}')
-RAM=$(free -m | grep Mem: | awk '{print $2}')
-if [[ "$VERSION_ID" -ge 22 && "$RAM" -lt 150000 ]]; then
+RAM_KB=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+RAM_MB=$((RAM_KB / 1024))
+if [ "$VERSION_ID" -ge 22 ] && [ "$RAM_MB" -lt "$MIN_RAM" ]; then
   echo "$RAM_WARNING"
 fi
 
 # Check packages
-CURL=$(list_installed | grep -c curl)
-if [ $CURL -eq 2 ]; then
+if list_installed | grep -q "^curl"; then
+  CURL_INSTALLED_FLAG=true
   checkpoint_true "$CURL_INSTALLED"
 else
+  CURL_INSTALLED_FLAG=false
   checkpoint_false "$CURL_NOT_INSTALLED"
 fi
 
-DNSMASQ=$(list_installed | grep dnsmasq-full | awk -F "-" '{print $3}' | tr -d '.')
-if [ $DNSMASQ -ge 287 ]; then
+DNSMASQ_VER=$(list_installed | grep "^dnsmasq-full" | grep -oE '[0-9]+\.[0-9]+' | head -n 1 | tr -d '.')
+if [ -n "$DNSMASQ_VER" ] && [ "$DNSMASQ_VER" -ge 287 ]; then
   checkpoint_true "$DNSMASQ_FULL_INSTALLED"
 else
   checkpoint_false "$DNSMASQ_FULL_NOT_INSTALLED"
@@ -374,7 +376,7 @@ if curl -Is https://community.antifilter.download/ | grep -q 200; then
   checkpoint_true "$INTERNET_IS_AVAILABLE"
 else
   checkpoint_false "$INTERNET_IS_NOT_AVAILABLE"
-  if [ $CURL -lt 2 ]; then
+  if [ "$CURL_INSTALLED_FLAG" = false ]; then
     echo "$CURL_NOT_INSTALLED"
   else
     printf "$INTERNET_DETAILS\n"
@@ -383,7 +385,7 @@ fi
 
 # Check IPv6
 
-if curl -6 -s https://ifconfig.io | egrep -q "(::)?[0-9a-fA-F]{1,4}(::?[0-9a-fA-F]{1,4}){1,7}(::)?"; then
+if curl -6 -s --connect-timeout 3 https://ifconfig.io | grep -Eq "(::)?[0-9a-fA-F]{1,4}(::?[0-9a-fA-F]{1,4}){1,7}(::)?"; then
   checkpoint_false "$IPV6_DETECTED"
 fi
 
@@ -395,13 +397,14 @@ else
   checkpoint_false "$VPN_TABLE_NOT_DEFINED"
 fi
 
+WG=false
 WIREGUARD=$(list_installed | grep -c wireguard-tools)
 if [ $WIREGUARD -eq 1 ]; then
   checkpoint_true "$WIREGUARD_TOOLS_INSTALLED"
   WG=true
 fi
 
-if [ "$WG" == true ]; then
+if [ "$WG" = true ]; then
   WG_PING=$(ping -c 1 -q -I wg0 itdog.info | grep -c "1 packets received")
   if [ $WG_PING -eq 1 ]; then
     checkpoint_true "$WIREGUARD_PROTOCOL"
@@ -435,13 +438,14 @@ if [ "$WG" == true ]; then
   fi
 fi
 
+OVPN=false
 if list_installed | grep -q openvpn; then
   checkpoint_true "$OPENVPN_INSTALLED"
   OVPN=true
 fi
 
 # Check OpenVPN
-if [ "$OVPN" == true ]; then
+if [ "$OVPN" = true ]; then
   if ping -c 1 -q -I tun0 itdog.info | grep -q "1 packets received"; then
     checkpoint_true "$OPENVPN_PROTOCOL"
   else
@@ -516,7 +520,7 @@ if list_installed | grep -q sing-box; then
   fi
 fi
 
-if which tun2socks | grep -q tun2socks; then
+if command -v tun2socks >/dev/null 2>&1; then
   checkpoint_true "$TUN2SOCKS_INSTALLED"
 
   # Check route table
@@ -687,7 +691,7 @@ case $COMMAND in
     # Create dump
     printf "\n$COLOR_BOLD_CYAN$DUMP_CREATION$COLOR_RESET\n"
     date >$DUMP_PATH
-    $HIVPN start >>$DUMP_PATH 2>&1
+    $HIVPN_SCRIPT_PATH start >>$DUMP_PATH 2>&1
     $GETDOMAINS_SCRIPT_PATH start >>$DUMP_PATH 2>&1
     uci show firewall >>$DUMP_PATH
     uci show network | sed -r 's/(.*private_key=|.*preshared_key=|.*public_key=|.*endpoint_host=|.*wan.ipaddr=|.*wan.netmask=|.*wan.gateway=|.*wan.dns|.*.macaddr=).*/\1REMOVED/' >>$DUMP_PATH
