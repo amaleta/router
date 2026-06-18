@@ -461,7 +461,7 @@ add_zone() {
         printf "\033[32;1mCreate zone\033[0m\n"
 
         # Delete exists zone
-        zone_tun_id=$(uci show firewall | grep -E "@zone.*network='tun0'" | awk -F '[][{}]' '{print $2}' | head -n 1)
+        zone_tun_id=$(uci show firewall | grep -E "@zone.*(network='tun0'|device='tun0')" | awk -F '[][{}]' '{print $2}' | head -n 1)
         if [ "$zone_tun_id" = 0 ] || [ "$zone_tun_id" = 1 ]; then
             printf "\033[32;1mtun0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
@@ -643,21 +643,20 @@ add_dns_resolver() {
             printf "\033[32;1mDNSCrypt needs to load the relays list. Please wait\033[0m\n"
             sleep 30
 
-            if [ -f /etc/dnscrypt-proxy2/relays.md ]; then
-                uci set dhcp.@dnsmasq[0].noresolv="1"
-                uci -q delete dhcp.@dnsmasq[0].server
-                uci add_list dhcp.@dnsmasq[0].server="127.0.0.53#53"
-                uci add_list dhcp.@dnsmasq[0].server='/use-application-dns.net/'
-                uci commit dhcp
-
-                printf "\033[32;1mDnsmasq restart\033[0m\n"
-
-                /etc/init.d/dnsmasq restart
-            else
+            if [ ! -f /etc/dnscrypt-proxy2/relays.md ]; then
                 printf "\033[31;1mDNSCrypt not download list on /etc/dnscrypt-proxy2. Repeat install DNSCrypt by script.\033[0m\n"
             fi
-    fi
+        fi
 
+        # Always configure dnsmasq for DNSCrypt (idempotent on re-run)
+        uci set dhcp.@dnsmasq[0].noresolv="1"
+        uci -q delete dhcp.@dnsmasq[0].server
+        uci add_list dhcp.@dnsmasq[0].server="127.0.0.53#53"
+        uci add_list dhcp.@dnsmasq[0].server='/use-application-dns.net/'
+        uci commit dhcp
+
+        printf "\033[32;1mDnsmasq restart\033[0m\n"
+        /etc/init.d/dnsmasq restart
     fi
 
     if [ "$DNS_RESOLVER" = 'STUBBY' ]; then
@@ -764,8 +763,14 @@ cat << 'EOF' >> /etc/init.d/getdomains
     mkdir -p /tmp/dnsmasq.d
     while [ "$count" -lt 10 ]; do
         if curl -m 3 -sf -o /dev/null github.com; then
-            curl -f $DOMAINS --output /tmp/dnsmasq.d/domains.lst
-            break
+            if curl -f "$DOMAINS" --output /tmp/dnsmasq.d/domains.lst; then
+                break
+            else
+                echo "Failed to download domain list [$count]"
+                count=$((count+1))
+                rm -f /tmp/dnsmasq.d/domains.lst
+                sleep 5
+            fi
         else
             echo "GitHub is not available. Check the internet availability [$count]"
             count=$((count+1))
