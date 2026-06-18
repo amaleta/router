@@ -141,11 +141,12 @@ install_awg_packages() {
     MAJOR_VERSION=$(echo "$VERSION" | cut -d '.' -f 1)
     MINOR_VERSION=$(echo "$VERSION" | cut -d '.' -f 2)
     PATCH_VERSION=$(echo "$VERSION" | cut -d '.' -f 3)
+    PATCH_VERSION=${PATCH_VERSION:-0}
 
     if [ "$MAJOR_VERSION" -gt 24 ] || \
-       [ "$MAJOR_VERSION" -eq 24 -a "$MINOR_VERSION" -gt 10 ] || \
-       [ "$MAJOR_VERSION" -eq 24 -a "$MINOR_VERSION" -eq 10 -a "$PATCH_VERSION" -ge 3 ] || \
-       [ "$MAJOR_VERSION" -eq 23 -a "$MINOR_VERSION" -eq 5 -a "$PATCH_VERSION" -ge 6 ]; then
+       { [ "$MAJOR_VERSION" -eq 24 ] && [ "$MINOR_VERSION" -gt 10 ]; } || \
+       { [ "$MAJOR_VERSION" -eq 24 ] && [ "$MINOR_VERSION" -eq 10 ] && [ "$PATCH_VERSION" -ge 3 ]; } || \
+       { [ "$MAJOR_VERSION" -eq 23 ] && [ "$MINOR_VERSION" -eq 5 ] && [ "$PATCH_VERSION" -ge 6 ]; }; then
         AWG_VERSION="2.0"
         LUCI_PACKAGE_NAME="luci-proto-amneziawg"
     else

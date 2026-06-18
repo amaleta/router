@@ -950,7 +950,7 @@ add_internal_wg() {
         printf "\033[32;1mCreate rule set\033[0m\n"
         uci add firewall rule
         uci set firewall.@rule[-1]=rule
-        uci set firewall.@rule[-1].name='mark_domains_intenal'
+        uci set firewall.@rule[-1].name='mark_domains_internal'
         uci set firewall.@rule[-1].src='lan'
         uci set firewall.@rule[-1].dest='*'
         uci set firewall.@rule[-1].proto='all'
@@ -976,12 +976,10 @@ add_internal_wg() {
         uci commit dhcp
     fi
 
-    sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /tmp/dnsmasq.d/domains.lst" "/etc/init.d/getdomains"
+    sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /tmp/dnsmasq.d/domains.lst" "/etc/init.d/getdomains" 2>/dev/null
 
     service dnsmasq restart
     service network restart
-
-    exit 0
 }
 
 download_awg_package() {
@@ -1047,11 +1045,12 @@ install_awg_packages() {
     MAJOR_VERSION=$(echo "$VERSION" | cut -d '.' -f 1)
     MINOR_VERSION=$(echo "$VERSION" | cut -d '.' -f 2)
     PATCH_VERSION=$(echo "$VERSION" | cut -d '.' -f 3)
+    PATCH_VERSION=${PATCH_VERSION:-0}
 
     if [ "$MAJOR_VERSION" -gt 24 ] || \
-       [ "$MAJOR_VERSION" -eq 24 -a "$MINOR_VERSION" -gt 10 ] || \
-       [ "$MAJOR_VERSION" -eq 24 -a "$MINOR_VERSION" -eq 10 -a "$PATCH_VERSION" -ge 3 ] || \
-       [ "$MAJOR_VERSION" -eq 23 -a "$MINOR_VERSION" -eq 5 -a "$PATCH_VERSION" -ge 6 ]; then
+       { [ "$MAJOR_VERSION" -eq 24 ] && [ "$MINOR_VERSION" -gt 10 ]; } || \
+       { [ "$MAJOR_VERSION" -eq 24 ] && [ "$MINOR_VERSION" -eq 10 ] && [ "$PATCH_VERSION" -ge 3 ]; } || \
+       { [ "$MAJOR_VERSION" -eq 23 ] && [ "$MINOR_VERSION" -eq 5 ] && [ "$PATCH_VERSION" -ge 6 ]; }; then
         AWG_VERSION="2.0"
         LUCI_PACKAGE_NAME="luci-proto-amneziawg"
     else
@@ -1139,7 +1138,10 @@ MODEL=$(cat /tmp/sysinfo/model)
 printf "\033[34;1mModel: $MODEL\033[0m\n"
 printf "\033[34;1mVersion: $OPENWRT_RELEASE\033[0m\n"
 
-VERSION_ID=$(echo $VERSION | awk -F. '{print $1}')
+# VERSION_ID is already set by os-release (e.g. "23" for OpenWrt 23.05.x)
+if [ -z "$VERSION_ID" ]; then
+    VERSION_ID=$(echo "$OPENWRT_RELEASE" | grep -oE '^[0-9]+' | head -n 1)
+fi
 
 if [ "$VERSION_ID" -ne 23 ] && [ "$VERSION_ID" -ne 24 ] && [ "$VERSION_ID" -ne 25 ]; then
     printf "\033[31;1mScript only supports OpenWrt 23.05, 24.10 and 25.x\033[0m\n"

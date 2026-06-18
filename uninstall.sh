@@ -50,9 +50,9 @@ echo "=== Cleaning firewall ==="
 delete_uci_section firewall ipset vpn_domains
 delete_uci_section firewall rule mark_domains
 
-# vpn_domains_internal set + mark_domains_intenal rule
+# vpn_domains_internal set + mark_domains_internal rule
 delete_uci_section firewall ipset vpn_domains_internal
-delete_uci_section firewall rule mark_domains_intenal
+delete_uci_section firewall rule mark_domains_internal
 
 # vpn_ip set + mark_ip rule
 delete_uci_section firewall ipset vpn_ip
@@ -77,11 +77,8 @@ sed -i '/110 vpninternal$/d' /etc/iproute2/rt_tables
 delete_uci_section network rule mark0x1
 delete_uci_section network rule mark0x2
 
-# Remove internal vpn route
-_i=0
-while uci -q delete network.vpn_route_internal && [ "$_i" -lt 20 ]; do
-    _i=$((_i + 1))
-done
+# Remove internal vpn route (named section, single delete)
+uci -q delete network.vpn_route_internal
 
 uci commit network || { echo "ERROR: uci commit network failed" >&2; ERRORS=$((ERRORS + 1)); }
 
