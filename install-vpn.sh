@@ -156,7 +156,7 @@ add_tunnel() {
     echo "8) Skip this step"
 
     while true; do
-    read -r -p '' TUNNEL
+    read -r TUNNEL
         case $TUNNEL in
 
         1)
@@ -217,10 +217,12 @@ add_tunnel() {
 
         route_vpn
 
-        read -r -p "Enter the private key (from [Interface]):"$'\n' WG_PRIVATE_KEY
+        printf "Enter the private key (from [Interface]):\n"
+        read -r WG_PRIVATE_KEY
 
         while true; do
-            read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):"$'\n' WG_IP
+            printf "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):\n"
+            read -r WG_IP
             if echo "$WG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
                 break
             else
@@ -228,11 +230,11 @@ add_tunnel() {
             fi
         done
 
-        read -r -p "Enter the public key (from [Peer]):"$'\n' WG_PUBLIC_KEY
-        read -r -p "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:"$'\n' WG_PRESHARED_KEY
-        read -r -p "Enter Endpoint host without port (Domain or IP) (from [Peer]):"$'\n' WG_ENDPOINT
+        printf "Enter the public key (from [Peer]):\n"; read -r WG_PUBLIC_KEY
+        printf "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:\n"; read -r WG_PRESHARED_KEY
+        printf "Enter Endpoint host without port (Domain or IP) (from [Peer]):\n"; read -r WG_ENDPOINT
 
-        read -r -p "Enter Endpoint host port (from [Peer]) [51820]:"$'\n' WG_ENDPOINT_PORT
+        printf "Enter Endpoint host port (from [Peer]) [51820]:\n"; read -r WG_ENDPOINT_PORT
         WG_ENDPOINT_PORT=${WG_ENDPOINT_PORT:-51820}
         if [ "$WG_ENDPOINT_PORT" = '51820' ]; then
             echo $WG_ENDPOINT_PORT
@@ -346,10 +348,12 @@ EOF
 
         route_vpn
 
-        read -r -p "Enter the private key (from [Interface]):"$'\n' AWG_PRIVATE_KEY
+        printf "Enter the private key (from [Interface]):\n"
+        read -r AWG_PRIVATE_KEY
 
         while true; do
-            read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (Address from [Interface]):"$'\n' AWG_IP
+            printf "Enter internal IP address with subnet, example 192.168.100.5/24 (Address from [Interface]):\n"
+            read -r AWG_IP
             if echo "$AWG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
                 break
             else
@@ -357,21 +361,21 @@ EOF
             fi
         done
 
-        read -r -p "Enter Jc value (from [Interface]):"$'\n' AWG_JC
-        read -r -p "Enter Jmin value (from [Interface]):"$'\n' AWG_JMIN
-        read -r -p "Enter Jmax value (from [Interface]):"$'\n' AWG_JMAX
-        read -r -p "Enter S1 value (from [Interface]):"$'\n' AWG_S1
-        read -r -p "Enter S2 value (from [Interface]):"$'\n' AWG_S2
-        read -r -p "Enter H1 value (from [Interface]):"$'\n' AWG_H1
-        read -r -p "Enter H2 value (from [Interface]):"$'\n' AWG_H2
-        read -r -p "Enter H3 value (from [Interface]):"$'\n' AWG_H3
-        read -r -p "Enter H4 value (from [Interface]):"$'\n' AWG_H4
+        printf "Enter Jc value (from [Interface]):\n"; read -r AWG_JC
+        printf "Enter Jmin value (from [Interface]):\n"; read -r AWG_JMIN
+        printf "Enter Jmax value (from [Interface]):\n"; read -r AWG_JMAX
+        printf "Enter S1 value (from [Interface]):\n"; read -r AWG_S1
+        printf "Enter S2 value (from [Interface]):\n"; read -r AWG_S2
+        printf "Enter H1 value (from [Interface]):\n"; read -r AWG_H1
+        printf "Enter H2 value (from [Interface]):\n"; read -r AWG_H2
+        printf "Enter H3 value (from [Interface]):\n"; read -r AWG_H3
+        printf "Enter H4 value (from [Interface]):\n"; read -r AWG_H4
 
-        read -r -p "Enter the public key (from [Peer]):"$'\n' AWG_PUBLIC_KEY
-        read -r -p "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:"$'\n' AWG_PRESHARED_KEY
-        read -r -p "Enter Endpoint host without port (Domain or IP) (from [Peer]):"$'\n' AWG_ENDPOINT
+        printf "Enter the public key (from [Peer]):\n"; read -r AWG_PUBLIC_KEY
+        printf "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:\n"; read -r AWG_PRESHARED_KEY
+        printf "Enter Endpoint host without port (Domain or IP) (from [Peer]):\n"; read -r AWG_ENDPOINT
 
-        read -r -p "Enter Endpoint host port (from [Peer]) [51820]:"$'\n' AWG_ENDPOINT_PORT
+        printf "Enter Endpoint host port (from [Peer]) [51820]:\n"; read -r AWG_ENDPOINT_PORT
         AWG_ENDPOINT_PORT=${AWG_ENDPOINT_PORT:-51820}
         if [ "$AWG_ENDPOINT_PORT" = '51820' ]; then
             echo $AWG_ENDPOINT_PORT
@@ -599,7 +603,7 @@ add_dns_resolver() {
     echo "3) Stubby (36K)"
 
     while true; do
-    read -r -p '' DNS_RESOLVER
+    read -r DNS_RESOLVER
         case $DNS_RESOLVER in
 
         1)
@@ -705,7 +709,7 @@ add_getdomains() {
     echo "4) Skip script creation"
 
     while true; do
-    read -r -p '' COUNTRY
+    read -r COUNTRY
         case $COUNTRY in
 
         1)
@@ -816,10 +820,12 @@ add_internal_wg() {
         install_awg_packages
     fi
 
-    read -r -p "Enter the private key (from [Interface]):"$'\n' WG_PRIVATE_KEY_INT
+    printf "Enter the private key (from [Interface]):\n"
+    read -r WG_PRIVATE_KEY_INT
 
     while true; do
-        read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):"$'\n' WG_IP
+        printf "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):\n"
+        read -r WG_IP
         if echo "$WG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
             break
         else
@@ -827,26 +833,26 @@ add_internal_wg() {
         fi
     done
 
-    read -r -p "Enter the public key (from [Peer]):"$'\n' WG_PUBLIC_KEY_INT
-    read -r -p "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:"$'\n' WG_PRESHARED_KEY_INT
-    read -r -p "Enter Endpoint host without port (Domain or IP) (from [Peer]):"$'\n' WG_ENDPOINT_INT
+    printf "Enter the public key (from [Peer]):\n"; read -r WG_PUBLIC_KEY_INT
+    printf "If use PresharedKey, Enter this (from [Peer]). If your don't use leave blank:\n"; read -r WG_PRESHARED_KEY_INT
+    printf "Enter Endpoint host without port (Domain or IP) (from [Peer]):\n"; read -r WG_ENDPOINT_INT
 
-    read -r -p "Enter Endpoint host port (from [Peer]) [51820]:"$'\n' WG_ENDPOINT_PORT_INT
+    printf "Enter Endpoint host port (from [Peer]) [51820]:\n"; read -r WG_ENDPOINT_PORT_INT
     WG_ENDPOINT_PORT_INT=${WG_ENDPOINT_PORT_INT:-51820}
     if [ "$WG_ENDPOINT_PORT_INT" = '51820' ]; then
         echo $WG_ENDPOINT_PORT_INT
     fi
 
     if [ "$PROTOCOL_NAME" = 'AmneziaWG' ]; then
-        read -r -p "Enter Jc value (from [Interface]):"$'\n' AWG_JC
-        read -r -p "Enter Jmin value (from [Interface]):"$'\n' AWG_JMIN
-        read -r -p "Enter Jmax value (from [Interface]):"$'\n' AWG_JMAX
-        read -r -p "Enter S1 value (from [Interface]):"$'\n' AWG_S1
-        read -r -p "Enter S2 value (from [Interface]):"$'\n' AWG_S2
-        read -r -p "Enter H1 value (from [Interface]):"$'\n' AWG_H1
-        read -r -p "Enter H2 value (from [Interface]):"$'\n' AWG_H2
-        read -r -p "Enter H3 value (from [Interface]):"$'\n' AWG_H3
-        read -r -p "Enter H4 value (from [Interface]):"$'\n' AWG_H4
+        printf "Enter Jc value (from [Interface]):\n"; read -r AWG_JC
+        printf "Enter Jmin value (from [Interface]):\n"; read -r AWG_JMIN
+        printf "Enter Jmax value (from [Interface]):\n"; read -r AWG_JMAX
+        printf "Enter S1 value (from [Interface]):\n"; read -r AWG_S1
+        printf "Enter S2 value (from [Interface]):\n"; read -r AWG_S2
+        printf "Enter H1 value (from [Interface]):\n"; read -r AWG_H1
+        printf "Enter H2 value (from [Interface]):\n"; read -r AWG_H2
+        printf "Enter H3 value (from [Interface]):\n"; read -r AWG_H3
+        printf "Enter H4 value (from [Interface]):\n"; read -r AWG_H4
     fi
 
     uci set network.${INTERFACE_NAME}=interface
@@ -1012,7 +1018,23 @@ download_awg_package() {
 }
 
 install_awg_packages() {
-    # Получение pkgarch с наибольшим приоритетом
+    # OpenWrt 25.x — AWG packages are in official feeds
+    if [ "$PKG_MANAGER" = "apk" ]; then
+        for pkg in kmod-amneziawg amneziawg-tools luci-proto-amneziawg; do
+            if is_pkg_installed "$pkg"; then
+                echo "$pkg already installed"
+            else
+                echo "Installing $pkg..."
+                pkg_install "$pkg" || {
+                    echo "Error installing $pkg. Please install manually and rerun."
+                    exit 1
+                }
+            fi
+        done
+        return 0
+    fi
+
+    # OpenWrt 24.x and below — download .ipk from GitHub
     PKGARCH=$(get_pkgarch)
 
     TARGET=$(ubus call system board | jsonfilter -e '@.release.target' | cut -d '/' -f 1)
@@ -1111,7 +1133,7 @@ install_awg_packages() {
 
 # System Details
 MODEL=$(cat /tmp/sysinfo/model)
-source /etc/os-release
+. /etc/os-release
 printf "\033[34;1mModel: $MODEL\033[0m\n"
 printf "\033[34;1mVersion: $OPENWRT_RELEASE\033[0m\n"
 
