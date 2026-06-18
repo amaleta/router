@@ -557,7 +557,7 @@ if list_installed | grep -q sing-box; then
     fi
   else
     checkpoint_false "$SINGBOX_CONFIG_ERROR:"
-    $singbox_check_cmd
+    $singbox_check_cmd 2>&1
   fi
 fi
 
