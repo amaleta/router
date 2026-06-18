@@ -105,19 +105,19 @@ check_repo() {
 }
 
 route_vpn () {
-    if [ "$TUNNEL" == wg ]; then
+    if [ "$TUNNEL" = wg ]; then
 cat << EOF > /etc/hotplug.d/iface/30-vpnroute
 #!/bin/sh
 
 ip route add table vpn default dev wg0
 EOF
-    elif [ "$TUNNEL" == awg ]; then
+    elif [ "$TUNNEL" = awg ]; then
 cat << EOF > /etc/hotplug.d/iface/30-vpnroute
 #!/bin/sh
 
 ip route add table vpn default dev awg0
 EOF
-    elif [ "$TUNNEL" == singbox ] || [ "$TUNNEL" == ovpn ] || [ "$TUNNEL" == tun2socks ]; then
+    elif [ "$TUNNEL" = singbox ] || [ "$TUNNEL" = ovpn ] || [ "$TUNNEL" = tun2socks ]; then
 cat << EOF > /etc/hotplug.d/iface/30-vpnroute
 #!/bin/sh
 
@@ -206,7 +206,7 @@ add_tunnel() {
         esac
     done
 
-    if [ "$TUNNEL" == 'wg' ]; then
+    if [ "$TUNNEL" = 'wg' ]; then
         printf "\033[32;1mConfigure WireGuard\033[0m\n"
         if is_pkg_installed wireguard-tools; then
             echo "Wireguard already installed"
@@ -221,7 +221,7 @@ add_tunnel() {
 
         while true; do
             read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):"$'\n' WG_IP
-            if echo "$WG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
+            if echo "$WG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
                 break
             else
                 echo "This IP is not valid. Please repeat"
@@ -259,7 +259,7 @@ add_tunnel() {
         uci commit
     fi
 
-    if [ "$TUNNEL" == 'ovpn' ]; then
+    if [ "$TUNNEL" = 'ovpn' ]; then
         if is_pkg_installed openvpn-openssl; then
             echo "OpenVPN already installed"
         else
@@ -270,12 +270,12 @@ add_tunnel() {
         route_vpn
     fi
 
-    if [ "$TUNNEL" == 'singbox' ]; then
+    if [ "$TUNNEL" = 'singbox' ]; then
         if is_pkg_installed sing-box; then
             echo "Sing-box already installed"
         else
             AVAILABLE_SPACE=$(df / | awk 'NR>1 { print $4 }')
-            if  [[ "$AVAILABLE_SPACE" -gt 2000 ]]; then
+            if [ "$AVAILABLE_SPACE" -gt 2000 ]; then
                 echo "Installed sing-box"
                 pkg_install sing-box
             else
@@ -331,15 +331,15 @@ EOF
         route_vpn
     fi
 
-    if [ "$TUNNEL" == 'wgForYoutube' ]; then
+    if [ "$TUNNEL" = 'wgForYoutube' ]; then
         add_internal_wg Wireguard
     fi
 
-    if [ "$TUNNEL" == 'awgForYoutube' ]; then
+    if [ "$TUNNEL" = 'awgForYoutube' ]; then
         add_internal_wg AmneziaWG
     fi
 
-    if [ "$TUNNEL" == 'awg' ]; then
+    if [ "$TUNNEL" = 'awg' ]; then
         printf "\033[32;1mConfigure Amnezia WireGuard\033[0m\n"
 
         install_awg_packages
@@ -350,7 +350,7 @@ EOF
 
         while true; do
             read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (Address from [Interface]):"$'\n' AWG_IP
-            if echo "$AWG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
+            if echo "$AWG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
                 break
             else
                 echo "This IP is not valid. Please repeat"
@@ -448,7 +448,7 @@ remove_forwarding() {
 }
 
 add_zone() {
-    if  [ "$TUNNEL" == 0 ]; then
+    if  [ "$TUNNEL" = 0 ]; then
         printf "\033[32;1mZone setting skipped\033[0m\n"
     elif uci show firewall | grep -q "@zone.*name='$TUNNEL'"; then
         printf "\033[32;1mZone already exist\033[0m\n"
@@ -457,7 +457,7 @@ add_zone() {
 
         # Delete exists zone
         zone_tun_id=$(uci show firewall | grep -E '@zone.*tun0' | awk -F '[][{}]' '{print $2}' | head -n 1)
-        if [ "$zone_tun_id" == 0 ] || [ "$zone_tun_id" == 1 ]; then
+        if [ "$zone_tun_id" = 0 ] || [ "$zone_tun_id" = 1 ]; then
             printf "\033[32;1mtun0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
         fi
@@ -466,7 +466,7 @@ add_zone() {
         fi
 
         zone_wg_id=$(uci show firewall | grep -E '@zone.*wg0' | awk -F '[][{}]' '{print $2}' | head -n 1)
-        if [ "$zone_wg_id" == 0 ] || [ "$zone_wg_id" == 1 ]; then
+        if [ "$zone_wg_id" = 0 ] || [ "$zone_wg_id" = 1 ]; then
             printf "\033[32;1mwg0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
         fi
@@ -475,7 +475,7 @@ add_zone() {
         fi
 
         zone_awg_id=$(uci show firewall | grep -E '@zone.*awg0' | awk -F '[][{}]' '{print $2}' | head -n 1)
-        if [ "$zone_awg_id" == 0 ] || [ "$zone_awg_id" == 1 ]; then
+        if [ "$zone_awg_id" = 0 ] || [ "$zone_awg_id" = 1 ]; then
             printf "\033[32;1mawg0 zone has an identifier of 0 or 1. That's not ok. Fix your firewall. lan and wan zones should have identifiers 0 and 1. \033[0m\n"
             exit 1
         fi
@@ -485,18 +485,18 @@ add_zone() {
 
         uci add firewall zone
         uci set firewall.@zone[-1].name="$TUNNEL"
-        if [ "$TUNNEL" == wg ]; then
+        if [ "$TUNNEL" = wg ]; then
             uci set firewall.@zone[-1].network='wg0'
-        elif [ "$TUNNEL" == awg ]; then
+        elif [ "$TUNNEL" = awg ]; then
             uci set firewall.@zone[-1].network='awg0'
-        elif [ "$TUNNEL" == singbox ] || [ "$TUNNEL" == ovpn ] || [ "$TUNNEL" == tun2socks ]; then
+        elif [ "$TUNNEL" = singbox ] || [ "$TUNNEL" = ovpn ] || [ "$TUNNEL" = tun2socks ]; then
             uci set firewall.@zone[-1].device='tun0'
         fi
-        if [ "$TUNNEL" == wg ] || [ "$TUNNEL" == awg ] || [ "$TUNNEL" == ovpn ] || [ "$TUNNEL" == tun2socks ]; then
+        if [ "$TUNNEL" = wg ] || [ "$TUNNEL" = awg ] || [ "$TUNNEL" = ovpn ] || [ "$TUNNEL" = tun2socks ]; then
             uci set firewall.@zone[-1].forward='REJECT'
             uci set firewall.@zone[-1].output='ACCEPT'
             uci set firewall.@zone[-1].input='REJECT'
-        elif [ "$TUNNEL" == singbox ]; then
+        elif [ "$TUNNEL" = singbox ]; then
             uci set firewall.@zone[-1].forward='ACCEPT'
             uci set firewall.@zone[-1].output='ACCEPT'
             uci set firewall.@zone[-1].input='ACCEPT'
@@ -507,34 +507,34 @@ add_zone() {
         uci commit firewall
     fi
 
-    if [ "$TUNNEL" == 0 ]; then
+    if [ "$TUNNEL" = 0 ]; then
         printf "\033[32;1mForwarding setting skipped\033[0m\n"
     elif uci show firewall | grep -q "@forwarding.*name='$TUNNEL-lan'"; then
         printf "\033[32;1mForwarding already configured\033[0m\n"
     else
         printf "\033[32;1mConfigured forwarding\033[0m\n"
         # Delete exists forwarding
-        if [[ $TUNNEL != "wg" ]]; then
+        if [ "$TUNNEL" != "wg" ]; then
             forward_id=$(uci show firewall | grep -E "@forwarding.*dest='wg'" | awk -F '[][{}]' '{print $2}' | head -n 1)
             remove_forwarding
         fi
 
-        if [[ $TUNNEL != "awg" ]]; then
+        if [ "$TUNNEL" != "awg" ]; then
             forward_id=$(uci show firewall | grep -E "@forwarding.*dest='awg'" | awk -F '[][{}]' '{print $2}' | head -n 1)
             remove_forwarding
         fi
 
-        if [[ $TUNNEL != "ovpn" ]]; then
+        if [ "$TUNNEL" != "ovpn" ]; then
             forward_id=$(uci show firewall | grep -E "@forwarding.*dest='ovpn'" | awk -F '[][{}]' '{print $2}' | head -n 1)
             remove_forwarding
         fi
 
-        if [[ $TUNNEL != "singbox" ]]; then
+        if [ "$TUNNEL" != "singbox" ]; then
             forward_id=$(uci show firewall | grep -E "@forwarding.*dest='singbox'" | awk -F '[][{}]' '{print $2}' | head -n 1)
             remove_forwarding
         fi
 
-        if [[ $TUNNEL != "tun2socks" ]]; then
+        if [ "$TUNNEL" != "tun2socks" ]; then
             forward_id=$(uci show firewall | grep -E "@forwarding.*dest='tun2socks'" | awk -F '[][{}]' '{print $2}' | head -n 1)
             remove_forwarding
         fi
@@ -550,10 +550,10 @@ add_zone() {
 }
 
 show_manual() {
-    if [ "$TUNNEL" == tun2socks ]; then
+    if [ "$TUNNEL" = tun2socks ]; then
         printf "\033[42;1mZone for tun2socks cofigured. But you need to set up the tunnel yourself.\033[0m\n"
         echo "Use this manual: https://cli.co/VNZISEM"
-    elif [ "$TUNNEL" == ovpn ]; then
+    elif [ "$TUNNEL" = ovpn ]; then
         printf "\033[42;1mZone for OpenVPN cofigured. But you need to set up the tunnel yourself.\033[0m\n"
         echo "Use this manual: https://itdog.info/nastrojka-klienta-openvpn-na-openwrt/"
     fi
@@ -590,7 +590,7 @@ add_set() {
 add_dns_resolver() {
     echo "Configure DNSCrypt2 or Stubby? It does matter if your ISP is spoofing DNS requests"
     DISK=$(df -m / | awk 'NR==2{ print $2 }')
-    if [[ "$DISK" -lt 32 ]]; then
+    if [ "$DISK" -lt 32 ]; then
         printf "\033[31;1mYour router a disk have less than 32MB. It is not recommended to install DNSCrypt, it takes 10MB\033[0m\n"
     fi
     echo "Select:"
@@ -623,7 +623,7 @@ add_dns_resolver() {
         esac
     done
 
-    if [ "$DNS_RESOLVER" == 'DNSCRYPT' ]; then
+    if [ "$DNS_RESOLVER" = 'DNSCRYPT' ]; then
         if is_pkg_installed dnscrypt-proxy2; then
             printf "\033[32;1mDNSCrypt2 already installed\033[0m\n"
         else
@@ -655,7 +655,7 @@ add_dns_resolver() {
 
     fi
 
-    if [ "$DNS_RESOLVER" == 'STUBBY' ]; then
+    if [ "$DNS_RESOLVER" = 'STUBBY' ]; then
         printf "\033[32;1mConfigure Stubby\033[0m\n"
 
         if is_pkg_installed stubby; then
@@ -735,11 +735,11 @@ add_getdomains() {
         esac
     done
 
-    if [ "$COUNTRY" == 'russia_inside' ]; then
+    if [ "$COUNTRY" = 'russia_inside' ]; then
         EOF_DOMAINS=DOMAINS=https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/inside-dnsmasq-nfset.lst
-    elif [ "$COUNTRY" == 'russia_outside' ]; then
+    elif [ "$COUNTRY" = 'russia_outside' ]; then
         EOF_DOMAINS=DOMAINS=https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Russia/outside-dnsmasq-nfset.lst
-    elif [ "$COUNTRY" == 'ukraine' ]; then
+    elif [ "$COUNTRY" = 'ukraine' ]; then
         EOF_DOMAINS=DOMAINS=https://raw.githubusercontent.com/itdoginfo/allow-domains/main/Ukraine/inside-dnsmasq-nfset.lst
     fi
 
@@ -820,7 +820,7 @@ add_internal_wg() {
 
     while true; do
         read -r -p "Enter internal IP address with subnet, example 192.168.100.5/24 (from [Interface]):"$'\n' WG_IP
-        if echo "$WG_IP" | egrep -oq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
+        if echo "$WG_IP" | grep -Eoq '^([0-9]{1,3}\.){3}[0-9]{1,3}/[0-9]+$'; then
             break
         else
             echo "This IP is not valid. Please repeat"
