@@ -335,10 +335,12 @@ EOF
 
     if [ "$TUNNEL" = 'wgForYoutube' ]; then
         add_internal_wg Wireguard
+        TUNNEL=0
     fi
 
     if [ "$TUNNEL" = 'awgForYoutube' ]; then
         add_internal_wg AmneziaWG
+        TUNNEL=0
     fi
 
     if [ "$TUNNEL" = 'awg' ]; then
@@ -760,7 +762,7 @@ EOF
 cat << 'EOF' >> /etc/init.d/getdomains
     count=0
     while true; do
-        if curl -m 3 github.com; then
+        if curl -m 3 -sf -o /dev/null github.com; then
             curl -f $DOMAINS --output /tmp/dnsmasq.d/domains.lst
             break
         else
@@ -944,7 +946,7 @@ add_internal_wg() {
         uci commit firewall
     fi
 
-    if uci show firewall | grep -q "@rule.*name='mark_domains_intenal'"; then
+    if uci show firewall | grep -q "@rule.*name='mark_domains_internal'"; then
         printf "\033[32;1mRule for set already exist\033[0m\n"
     else
         printf "\033[32;1mCreate rule set\033[0m\n"
