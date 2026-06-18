@@ -368,6 +368,8 @@ EOF
         printf "Enter Jmax value (from [Interface]):\n"; read -r AWG_JMAX
         printf "Enter S1 value (from [Interface]):\n"; read -r AWG_S1
         printf "Enter S2 value (from [Interface]):\n"; read -r AWG_S2
+        printf "Enter S3 value (from [Interface]) [optional, leave blank to skip]:\n"; read -r AWG_S3
+        printf "Enter S4 value (from [Interface]) [optional, leave blank to skip]:\n"; read -r AWG_S4
         printf "Enter H1 value (from [Interface]):\n"; read -r AWG_H1
         printf "Enter H2 value (from [Interface]):\n"; read -r AWG_H2
         printf "Enter H3 value (from [Interface]):\n"; read -r AWG_H3
@@ -394,6 +396,8 @@ EOF
         uci set network.awg0.awg_jmax="$AWG_JMAX"
         uci set network.awg0.awg_s1="$AWG_S1"
         uci set network.awg0.awg_s2="$AWG_S2"
+        [ -n "$AWG_S3" ] && uci set network.awg0.awg_s3="$AWG_S3"
+        [ -n "$AWG_S4" ] && uci set network.awg0.awg_s4="$AWG_S4"
         uci set network.awg0.awg_h1="$AWG_H1"
         uci set network.awg0.awg_h2="$AWG_H2"
         uci set network.awg0.awg_h3="$AWG_H3"
@@ -874,6 +878,8 @@ add_internal_wg() {
         printf "Enter Jmax value (from [Interface]):\n"; read -r AWG_JMAX
         printf "Enter S1 value (from [Interface]):\n"; read -r AWG_S1
         printf "Enter S2 value (from [Interface]):\n"; read -r AWG_S2
+        printf "Enter S3 value (from [Interface]) :\n"; read -r AWG_S3
+        printf "Enter S4 value (from [Interface]) :\n"; read -r AWG_S4
         printf "Enter H1 value (from [Interface]):\n"; read -r AWG_H1
         printf "Enter H2 value (from [Interface]):\n"; read -r AWG_H2
         printf "Enter H3 value (from [Interface]):\n"; read -r AWG_H3
@@ -892,6 +898,8 @@ add_internal_wg() {
         uci set network.${INTERFACE_NAME}.awg_jmax="$AWG_JMAX"
         uci set network.${INTERFACE_NAME}.awg_s1="$AWG_S1"
         uci set network.${INTERFACE_NAME}.awg_s2="$AWG_S2"
+        [ -n "$AWG_S3" ] && uci set network.${INTERFACE_NAME}.awg_s3="$AWG_S3"
+        [ -n "$AWG_S4" ] && uci set network.${INTERFACE_NAME}.awg_s4="$AWG_S4"
         uci set network.${INTERFACE_NAME}.awg_h1="$AWG_H1"
         uci set network.${INTERFACE_NAME}.awg_h2="$AWG_H2"
         uci set network.${INTERFACE_NAME}.awg_h3="$AWG_H3"
