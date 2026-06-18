@@ -457,9 +457,15 @@ if list_installed | grep -q "^amneziawg-tools\|^luci-proto-amneziawg\|^luci-app-
 fi
 
 if [ "$AWG" = true ]; then
-  AWG_PING=$(ping -c 1 -q -I awg0 itdog.info 2>/dev/null | grep -c "1 packets received")
-  if [ "$AWG_PING" -eq 1 ]; then
-    checkpoint_true "AmneziaWG"
+  # Check via routing table vpn, not via direct interface bind
+  AWG_ROUTE=$(ip route show table vpn 2>/dev/null | grep -c "default dev awg0")
+  if [ "$AWG_ROUTE" -ge 1 ]; then
+    AWG_UP=$(ifstatus awg0 2>/dev/null | jsonfilter -e '@.up' 2>/dev/null)
+    if [ "$AWG_UP" = "true" ]; then
+      checkpoint_true "AmneziaWG"
+    else
+      checkpoint_false "$AWG_TUNNEL_NOT_WORKING"
+    fi
   else
     checkpoint_false "$AWG_TUNNEL_NOT_WORKING"
   fi
@@ -521,43 +527,47 @@ fi
 if list_installed | grep -q sing-box; then
   checkpoint_true "$SINGBOX_INSTALLED"
 
-  # Check route table
-  if [ "$VPN_TABLE_DEFINED" = true ]; then
-    if ip route show table vpn | grep -q "default dev tun0"; then
-      checkpoint_true "$SINGBOX_ROUTING_TABLE_EXISTS"
+  # Only check routing and config if sing-box service is actually running
+  SINGBOX_RUNNING=$(service sing-box status 2>/dev/null | grep -c 'running')
+  if [ "$SINGBOX_RUNNING" -ge 1 ]; then
+    # Check route table
+    if [ "$VPN_TABLE_DEFINED" = true ]; then
+      if ip route show table vpn | grep -q "default dev tun0"; then
+        checkpoint_true "$SINGBOX_ROUTING_TABLE_EXISTS"
+      else
+        checkpoint_false "$SINGBOX_ROUTING_TABLE_DOESNT_EXIST"
+      fi
     else
       checkpoint_false "$SINGBOX_ROUTING_TABLE_DOESNT_EXIST"
     fi
-  else
-    checkpoint_false "$SINGBOX_ROUTING_TABLE_DOESNT_EXIST"
-  fi
 
-  # Sing-box uci validation
-  if uci show sing-box 2>&1 | grep -q "Parse error"; then
-    checkpoint_false "$SINGBOX_UCI_CONFIG_ERROR"
-  else
-    checkpoint_true "$SINGBOX_UCI_CONFIG_OK"
-  fi
-
-  singbox_check_cmd="sing-box -c /etc/sing-box/config.json check"
-  if $singbox_check_cmd >/dev/null 2>&1; then
-    checkpoint_true "$SINGBOX_CONFIG_OK"
-
-    # Check traffic
-    IP_EXTERNAL=$(curl -s ifconfig.me)
-
-    IP_VPN=$(curl --interface tun0 -s ifconfig.me)
-
-    SINGBOX_WORKING=$(update_vpn_ip "$SINGBOX_WORKING_TEMPLATE" "$IP_VPN")
-
-    if [ "$IP_EXTERNAL" != "$IP_VPN" ]; then
-      checkpoint_true "$SINGBOX_WORKING"
+    # Sing-box uci validation
+    if uci show sing-box 2>&1 | grep -q "Parse error"; then
+      checkpoint_false "$SINGBOX_UCI_CONFIG_ERROR"
     else
-      checkpoint_false "$SINGBOX_ROUTING_DOESNT_WORK"
+      checkpoint_true "$SINGBOX_UCI_CONFIG_OK"
     fi
-  else
-    checkpoint_false "$SINGBOX_CONFIG_ERROR:"
-    $singbox_check_cmd 2>&1
+
+    singbox_check_cmd="sing-box -c /etc/sing-box/config.json check"
+    if $singbox_check_cmd >/dev/null 2>&1; then
+      checkpoint_true "$SINGBOX_CONFIG_OK"
+
+      # Check traffic
+      IP_EXTERNAL=$(curl -s ifconfig.me)
+
+      IP_VPN=$(curl --interface tun0 -s ifconfig.me)
+
+      SINGBOX_WORKING=$(update_vpn_ip "$SINGBOX_WORKING_TEMPLATE" "$IP_VPN")
+
+      if [ "$IP_EXTERNAL" != "$IP_VPN" ]; then
+        checkpoint_true "$SINGBOX_WORKING"
+      else
+        checkpoint_false "$SINGBOX_ROUTING_DOESNT_WORK"
+      fi
+    else
+      checkpoint_false "$SINGBOX_CONFIG_ERROR:"
+      $singbox_check_cmd 2>&1
+    fi
   fi
 fi
 
