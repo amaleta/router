@@ -448,6 +448,10 @@ dnsmasqconfdir() {
 
 remove_forwarding() {
     if [ ! -z "$forward_id" ]; then
+        if [ "$forward_id" = "0" ] || [ "$forward_id" = "1" ]; then
+            printf "\033[31;1mForwarding id $forward_id is 0 or 1. Skipping to protect lan/wan rules.\033[0m\n"
+            return
+        fi
         while uci -q delete firewall.@forwarding[$forward_id]; do :; done
     fi
 }
@@ -989,7 +993,9 @@ add_internal_wg() {
         uci commit dhcp
     fi
 
-    sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /tmp/dnsmasq.d/domains.lst" "/etc/init.d/getdomains" 2>/dev/null
+    if ! grep -q 'youtube.com.*domains.lst' /etc/init.d/getdomains 2>/dev/null; then
+        sed -i "/done/a sed -i '/youtube.com\\\|ytimg.com\\\|ggpht.com\\\|googlevideo.com\\\|googleapis.com\\\|youtubekids.com/d' /tmp/dnsmasq.d/domains.lst" "/etc/init.d/getdomains" 2>/dev/null
+    fi
 
     /etc/init.d/dnsmasq restart
 }
@@ -1151,7 +1157,7 @@ printf "\033[34;1mModel: $MODEL\033[0m\n"
 printf "\033[34;1mVersion: $OPENWRT_RELEASE\033[0m\n"
 
 # Extract major version number (e.g. "25.12.4" → "25")
-VERSION_ID=${VERSION_ID%%.*}
+VERSION_ID=$(echo "${VERSION_ID:-$VERSION}" | grep -oE '^[0-9]+' | head -n 1)
 if [ -z "$VERSION_ID" ]; then
     VERSION_ID=$(echo "$OPENWRT_RELEASE" | grep -oE '^[0-9]+' | head -n 1)
 fi
